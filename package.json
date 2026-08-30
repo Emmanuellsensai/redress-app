@@ -5,7 +5,8 @@
   "workspaces": [
     "contract",
     "sdk",
-    "frontend"
+    "frontend",
+    "verdict-worker"
   ],
   "overrides": {
     "@midnight-ntwrk/wallet-sdk": "1.2.0",

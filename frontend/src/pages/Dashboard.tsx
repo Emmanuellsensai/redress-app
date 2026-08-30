@@ -13,6 +13,7 @@ import {
   type Verdict,
   type ClaimType,
 } from '@redress/sdk';
+import { fetchVerdict } from '../lib/verdict-client';
 import {
   KeyRound,
   Lock,
@@ -29,30 +30,26 @@ import { fromHex, toHex, truncateHex } from '../lib/hex';
 
 const SK_STORAGE_KEY = 'redress_platform_sk';
 
-/** Mock verdict — replaced in Phase 4 with a real verdict-worker call. */
-const getMockVerdict = async (evidence: string, claimType: ClaimType): Promise<Verdict> => {
-  await new Promise((r) => setTimeout(r, 1500));
-  return {
-    decision: 'approved',
-    confidence: 0.85,
-    reasoning: `Based on the submitted evidence for this ${claimType.replace(
-      '_',
-      ' ',
-    )} claim, the documentation appears sufficient to support the claim. The evidence describes a specific incident with identifiable details.`,
-    claimType,
-    timestamp: Date.now(),
-  };
-};
-
 type ClaimSlot = {
   index: number;
   envelope: Uint8Array;
   plaintext?: string;
+  claimType: ClaimType;
   verdict?: Verdict;
+  verdicting?: boolean;
+  verdictError?: string;
   posting?: boolean;
   verdictHash?: string;
   error?: string;
 };
+
+const CLAIM_TYPE_OPTIONS: { value: ClaimType; label: string }[] = [
+  { value: 'fraud', label: 'Fraud' },
+  { value: 'refund', label: 'Refund' },
+  { value: 'chargeback', label: 'Chargeback' },
+  { value: 'kyc_exception', label: 'KYC exception' },
+  { value: 'account_appeal', label: 'Account appeal' },
+];
 
 export default function Dashboard() {
   const [state, setState] = useState<PublicState | null>(null);
@@ -72,8 +69,11 @@ export default function Dashboard() {
       const s = await readPublicState();
       setState(s);
       if (s) {
-        setClaims(
-          s.evidenceInbox.map((envelope, index) => ({ index, envelope })),
+        setClaims((prev) =>
+          s.evidenceInbox.map((envelope, index) => {
+            const existing = prev.find((p) => p.index === index);
+            return existing ?? { index, envelope, claimType: 'fraud' };
+          }),
         );
       }
     } finally {
@@ -142,11 +142,28 @@ export default function Dashboard() {
     );
   };
 
+  const setClaimType = (idx: number, claimType: ClaimType) => {
+    setClaims((prev) => prev.map((c) => (c.index === idx ? { ...c, claimType } : c)));
+  };
+
   const runVerdict = async (idx: number) => {
     const claim = claims.find((c) => c.index === idx);
     if (!claim?.plaintext) return;
-    const verdict = await getMockVerdict(claim.plaintext, 'fraud');
-    setClaims((prev) => prev.map((c) => (c.index === idx ? { ...c, verdict } : c)));
+    setClaims((prev) =>
+      prev.map((c) => (c.index === idx ? { ...c, verdicting: true, verdictError: undefined } : c)),
+    );
+    try {
+      const verdict = await fetchVerdict(claim.plaintext, claim.claimType);
+      setClaims((prev) =>
+        prev.map((c) => (c.index === idx ? { ...c, verdicting: false, verdict } : c)),
+      );
+    } catch (err) {
+      setClaims((prev) =>
+        prev.map((c) =>
+          c.index === idx ? { ...c, verdicting: false, verdictError: errorText(err) } : c,
+        ),
+      );
+    }
   };
 
   const postVerdict = async (idx: number) => {
@@ -263,6 +280,7 @@ export default function Dashboard() {
                   key={claim.index}
                   claim={claim}
                   onDecrypt={() => decrypt(claim.index)}
+                  onClaimTypeChange={(t) => setClaimType(claim.index, t)}
                   onGetVerdict={() => runVerdict(claim.index)}
                   onPostVerdict={() => postVerdict(claim.index)}
                   canPost={!!api && !!accountId}
@@ -348,12 +366,14 @@ function RegisterPanel({
 function ClaimCard({
   claim,
   onDecrypt,
+  onClaimTypeChange,
   onGetVerdict,
   onPostVerdict,
   canPost,
 }: {
   claim: ClaimSlot;
   onDecrypt: () => void;
+  onClaimTypeChange: (t: ClaimType) => void;
   onGetVerdict: () => void;
   onPostVerdict: () => void;
   canPost: boolean;
@@ -421,9 +441,51 @@ function ClaimCard({
           </div>
 
           {!claim.verdict ? (
-            <button className="btn btn-primary" onClick={onGetVerdict}>
-              <Sparkles size={14} strokeWidth={1.5} /> Get AI verdict
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label htmlFor={`ct-${claim.index}`}>Claim type</label>
+                <select
+                  id={`ct-${claim.index}`}
+                  value={claim.claimType}
+                  onChange={(e) => onClaimTypeChange(e.target.value as ClaimType)}
+                  disabled={claim.verdicting}
+                >
+                  {CLAIM_TYPE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <button
+                  className="btn btn-primary"
+                  onClick={onGetVerdict}
+                  disabled={claim.verdicting}
+                >
+                  {claim.verdicting ? (
+                    <span className="spinner" />
+                  ) : (
+                    <Sparkles size={14} strokeWidth={1.5} />
+                  )}
+                  {claim.verdicting
+                    ? 'Adjudicating…'
+                    : claim.verdictError
+                      ? 'Retry AI verdict'
+                      : 'Get AI verdict'}
+                </button>
+              </div>
+              {claim.verdictError && (
+                <div style={{ fontSize: 13, color: 'var(--color-accent)' }}>
+                  <AlertCircle
+                    size={12}
+                    strokeWidth={1.5}
+                    style={{ verticalAlign: 'middle', marginRight: 4 }}
+                  />
+                  {claim.verdictError}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="card-verdict" style={{ marginBottom: 12 }}>
               <div
