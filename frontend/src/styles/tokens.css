@@ -1,0 +1,16 @@
+:root {
+  --color-surface:       #FAFAF8;
+  --color-surface-alt:   #F0EEEA;
+  --color-ink:           #1A1A18;
+  --color-ink-muted:     #6B6B63;
+  --color-accent:        #B8432F;
+  --color-accent-hover:  #9A3626;
+  --color-success:       #2D6A4F;
+  --color-warning:       #C77F2B;
+  --color-border:        #D9D5CE;
+  --color-verdict-bg:    #F5F0E8;
+
+  --font-display: 'Fraunces', serif;
+  --font-body:    'Inter', sans-serif;
+  --font-mono:    'IBM Plex Mono', monospace;
+}

@@ -1,0 +1,41 @@
+{
+  "name": "redress-app-contract",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Redress Compact contract, deployment tooling and circuit tests",
+  "license": "Apache-2.0",
+  "scripts": {
+    "compile": "compact compile src/redress.compact managed/redress",
+    "sync:zk-assets": "node scripts/sync-zk-assets.mjs",
+    "setup": "npx tsx scripts/setup.ts",
+    "deploy": "npx tsx scripts/deploy.ts",
+    "check-balance": "npx tsx scripts/check-balance.ts",
+    "proof-server:start": "docker compose up -d",
+    "proof-server:stop": "docker compose down",
+    "clean": "rm -rf managed ../frontend/public/zk",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.16.0",
+    "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
+    "@midnight-ntwrk/midnight-js-http-client-proof-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-level-private-state-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-network-id": "4.1.1",
+    "@midnight-ntwrk/midnight-js-node-zk-config-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
+    "@midnight-ntwrk/wallet-sdk": "1.2.0",
+    "rxjs": "^7.8.2",
+    "ws": "^8.21.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.23.1",
+    "typescript": "^6.0.3",
+    "vitest": "^2.1.9"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

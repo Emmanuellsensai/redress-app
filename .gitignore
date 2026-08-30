@@ -1,0 +1,8 @@
+node_modules/
+dist/
+frontend/public/zk/
+.midnight-state.json
+.midnight-wallet-state
+*.log
+.env
+.env.local

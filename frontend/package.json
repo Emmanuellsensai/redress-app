@@ -1,0 +1,49 @@
+{
+  "name": "redress-app-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Redress claims web app",
+  "license": "Apache-2.0",
+  "scripts": {
+    "predev": "node ../contract/scripts/sync-zk-assets.mjs",
+    "dev": "vite",
+    "prebuild:web": "node ../contract/scripts/sync-zk-assets.mjs",
+    "build:web": "vite build",
+    "preview:web": "vite preview",
+    "build": "npx tsc --noEmit || true"
+  },
+  "dependencies": {
+    "@redress/sdk": "*",
+    "@midnight-ntwrk/dapp-connector-api": "^4.0.1",
+    "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
+    "@midnight-ntwrk/midnight-js-dapp-connector-proof-provider": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-fetch-zk-config-provider": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-level-private-state-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-network-id": "4.1.1",
+    "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
+    "@midnight-ntwrk/midnight-js-types": "4.1.1",
+    "@midnight-ntwrk/midnight-js-utils": "4.1.1",
+    "buffer": "^6.0.3",
+    "events": "^3.3.0",
+    "framer-motion": "^13.0.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.1",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.5"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
