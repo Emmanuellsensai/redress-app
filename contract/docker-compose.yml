@@ -1,0 +1,7 @@
+services:
+  proof-server:
+    image: us-docker.pkg.dev/midnight-ntwrk/midnight-docker/proof-server:2025.09.15
+    ports:
+      - '6300:6300'
+    environment:
+      - RUST_LOG=info

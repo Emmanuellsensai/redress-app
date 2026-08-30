@@ -1,0 +1,74 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// ============================================================================
+// Redress - Privacy-Preserving Claims Infrastructure
+// ============================================================================
+//
+// DUAL-LEDGER MODEL
+// -----------------
+// PUBLIC ledger:  claim count, verdict hashes, platform public key,
+//                 platform key version, encrypted evidence inbox
+// PRIVATE inputs: evidence plaintext (never touches ledger),
+//                 verdict reasoning (committed via hash only)
+//
+// The ZK proof binds private witnesses to their public commitments.
+// A caller cannot submit an arbitrary hash without knowing the preimage.
+
+// --- Public Ledger State ---
+
+// Total claims submitted
+export ledger claim_count: Counter;
+
+// Platform's curve25519 public key for encrypting evidence
+export ledger platform_public_key: Bytes<32>;
+
+// Version counter for platform key rotation detection
+export ledger platform_key_version: Counter;
+
+// Encrypted evidence inbox (append-only, newest first)
+// Each entry: ephemeral_pk(32) || nonce(24) || box_ciphertext(~272) || padding
+export ledger evidence_inbox: List<Bytes<512>>;
+
+// Hash commitment to the most recently submitted evidence plaintext
+export ledger latest_evidence_hash: Bytes<32>;
+
+// Hash commitment to the most recent AI verdict
+export ledger latest_verdict_hash: Bytes<32>;
+
+// Number of verdicts issued
+export ledger verdict_count: Counter;
+
+// --- Circuits ---
+
+// Register a platform's curve25519 public key so claimants can encrypt
+// evidence to it. Public keys are safe to disclose by construction.
+export circuit register_platform(new_public_key: Bytes<32>): [] {
+    platform_public_key = disclose(new_public_key);
+    platform_key_version.increment(1);
+}
+
+// Submit an encrypted claim with a private evidence witness.
+// The plaintext is committed via persistentHash and never leaves the circuit.
+// The ciphertext is disclosed (unreadable without the platform's secret key).
+export circuit submit_claim(
+    encrypted_evidence: Bytes<512>,
+    evidence_plaintext: Bytes<256>
+): [] {
+    const evidence_hash = persistentHash<Bytes<256>>(evidence_plaintext);
+    evidence_inbox.pushFront(disclose(encrypted_evidence));
+    latest_evidence_hash = disclose(evidence_hash);
+    claim_count.increment(1);
+}
+
+// Post an AI verdict commitment on-chain. The verdict text is private;
+// only its hash reaches the ledger. Anyone given the plaintext verdict
+// out-of-band can re-derive the hash and confirm it matches.
+export circuit post_verdict(
+    verdict_text: Bytes<256>
+): [] {
+    const verdict_hash = persistentHash<Bytes<256>>(verdict_text);
+    latest_verdict_hash = disclose(verdict_hash);
+    verdict_count.increment(1);
+}
