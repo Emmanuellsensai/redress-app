@@ -15,10 +15,10 @@ Frozen interface between the SDK, frontend, and verdict worker. Do not modify wi
 }
 ```
 
-- `evidence` — decrypted plaintext evidence. Non-empty string.
-- `claimType` — one of the five enum values above.
+- `evidence`: decrypted plaintext evidence. Non-empty string.
+- `claimType`: one of the five enum values above.
 
-**Success — HTTP 200**
+**Success. HTTP 200**
 
 ```json
 {
@@ -32,13 +32,13 @@ Frozen interface between the SDK, frontend, and verdict worker. Do not modify wi
 }
 ```
 
-- `decision` — verdict outcome.
-- `confidence` — number in `[0.0, 1.0]`.
-- `reasoning` — 2–3 sentences from the AI (kept short to fit the 256-byte on-chain witness after JSON serialization).
-- `claimType` — echoed back from the request.
-- `timestamp` — unix milliseconds when the verdict was issued.
+- `decision`: verdict outcome.
+- `confidence`: number in `[0.0, 1.0]`.
+- `reasoning`: 2–3 sentences from the AI (kept short to fit the 256-byte on-chain witness after JSON serialization).
+- `claimType`: echoed back from the request.
+- `timestamp`: unix milliseconds when the verdict was issued.
 
-**Error — HTTP 400 / 500**
+**Error. HTTP 400 / 500**
 
 ```json
 {
@@ -46,8 +46,8 @@ Frozen interface between the SDK, frontend, and verdict worker. Do not modify wi
 }
 ```
 
-- `400` — validation error (missing/bad `evidence` or `claimType`, unparseable AI JSON).
-- `500` — both providers (Gemini primary, Groq fallback) failed.
+- `400`: validation error (missing/bad `evidence` or `claimType`, unparseable AI JSON).
+- `500`: both providers (Gemini primary, Groq fallback) failed.
 
 ## On-Chain Verdict Serialization
 
@@ -95,7 +95,7 @@ The generated TypeScript ledger projector uses the Compact source's snake_case f
 | Compact ledger field | `PublicState` field |
 | --- | --- |
 | `claim_count` | `claimCount` |
-| `platform_public_key` | `platformPublicKey` (or `null` if all zeros — see `isUnregisteredKey`) |
+| `platform_public_key` | `platformPublicKey` (or `null` if all zeros. See `isUnregisteredKey`) |
 | `platform_key_version` | `platformKeyVersion` |
 | `evidence_inbox` | `evidenceInbox` (iterated into a `Uint8Array[]`, newest first) |
 | `latest_evidence_hash` | `latestEvidenceHash` |

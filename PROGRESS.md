@@ -2,37 +2,37 @@
 
 ## What was built
 
-Everything in this repository was built from scratch during Wave 1 (August 27 – September 16, 2026). No code was carried over verbatim from any prior project. The SDK's chain-layer and wallet-provider patterns are ports of the corresponding files from Anonymous Whispers (a prior public dApp by the same builder), rewritten for the Redress contract's circuit surface — every domain type, every ledger field, every circuit call was written for this project.
+Everything in this repository was built from scratch during Wave 1 (August 27 – September 16, 2026). No code was carried over verbatim from any prior project. The SDK's chain-layer and wallet-provider patterns are ports of the corresponding files from Anonymous Whispers (a prior public dApp by the same builder), rewritten for the Redress contract's circuit surface. Every domain type, every ledger field, every circuit call was written for this project.
 
 ### Compact Contract (`contract/`)
 
-- `contract/src/redress.compact` — three circuits:
-  - `register_platform(new_public_key: Bytes<32>)` — discloses the platform's curve25519 public key; increments a rotation counter.
-  - `submit_claim(encrypted_evidence: Bytes<512>, evidence_plaintext: Bytes<256>)` — plaintext is a private witness; the circuit computes `persistentHash(plaintext)` in-circuit and discloses only the hash into `latest_evidence_hash`. The sealed envelope is pushed onto the public `evidence_inbox`.
-  - `post_verdict(verdict_text: Bytes<256>)` — verdict text is a private witness; only its `persistentHash` reaches `latest_verdict_hash`.
-- All three circuits use in-circuit `persistentHash` to bind private witnesses to public commitments. No private input is declared without a constraint (the mistake that got Anonymous Whispers' initial submission rejected — deliberately avoided here).
+- `contract/src/redress.compact`: three circuits:
+  - `register_platform(new_public_key: Bytes<32>)`: discloses the platform's curve25519 public key; increments a rotation counter.
+  - `submit_claim(encrypted_evidence: Bytes<512>, evidence_plaintext: Bytes<256>)`: plaintext is a private witness; the circuit computes `persistentHash(plaintext)` in-circuit and discloses only the hash into `latest_evidence_hash`. The sealed envelope is pushed onto the public `evidence_inbox`.
+  - `post_verdict(verdict_text: Bytes<256>)`: verdict text is a private witness; only its `persistentHash` reaches `latest_verdict_hash`.
+- All three circuits use in-circuit `persistentHash` to bind private witnesses to public commitments. No private input is declared without a constraint (the mistake that got Anonymous Whispers' initial submission rejected: deliberately avoided here).
 - Compiles cleanly with `compact compile` (verified: `register_platform` k=9 rows=303, `submit_claim` k=14 rows=16129, `post_verdict` k=14 rows=11832).
 - Compiled artifacts (`contract/managed/redress/`) committed to git so the frontend renders without a local Compact toolchain.
 
 ### SDK (`sdk/`)
 
-- `sdk/src/chain.ts` — browser provider wiring for all three circuits. `setNetworkId('preprod')` at module scope; `window.fetch.bind(window)` explicitly passed to `FetchZkConfigProvider`; native `WebSocket` explicitly passed to `indexerPublicDataProvider`. Exports `readPublicState`, `connectToContract`, `deployRedressContract`, `redressCallTx`, `isUnregisteredKey`.
-- `sdk/src/crypto.ts` — nacl.box sealed envelope: single-use ephemeral keypair per submission, 24-byte nonce, ciphertext for 256-byte padded plaintext, 512-byte fixed envelope layout to prevent length leaks.
-- `sdk/src/wallet-provider.ts` — DApp Connector bridge: `serialize()` → hex → connector → hex → `Transaction.deserialize(...)` round-trip; `identifiers()[0]` used for the transaction id (per Midnight docs — `transactionHash()` is not safe because merging can change it).
-- `sdk/src/types.ts` — `ClaimType`, `ClaimStatus`, `Verdict`, `PublicState` domain types.
-- `sdk/test/crypto.test.ts` — six passing unit tests: round-trip, wrong-key rejection, padding (pad + truncate), padding removal, ephemeral uniqueness.
+- `sdk/src/chain.ts`: browser provider wiring for all three circuits. `setNetworkId('preprod')` at module scope; `window.fetch.bind(window)` explicitly passed to `FetchZkConfigProvider`; native `WebSocket` explicitly passed to `indexerPublicDataProvider`. Exports `readPublicState`, `connectToContract`, `deployRedressContract`, `redressCallTx`, `isUnregisteredKey`.
+- `sdk/src/crypto.ts`: nacl.box sealed envelope: single-use ephemeral keypair per submission, 24-byte nonce, ciphertext for 256-byte padded plaintext, 512-byte fixed envelope layout to prevent length leaks.
+- `sdk/src/wallet-provider.ts`: DApp Connector bridge: `serialize()` → hex → connector → hex → `Transaction.deserialize(...)` round-trip; `identifiers()[0]` used for the transaction id (per Midnight docs, `transactionHash()` is not safe because merging can change it).
+- `sdk/src/types.ts`: `ClaimType`, `ClaimStatus`, `Verdict`, `PublicState` domain types.
+- `sdk/test/crypto.test.ts`: six passing unit tests: round-trip, wrong-key rejection, padding (pad + truncate), padding removal, ephemeral uniqueness.
 
 ### Frontend (`frontend/`)
 
 Five routes, all wired through the SDK:
 
-- **`/` Landing** — product pitch, three-step how-it-works, Midnight explainer, Framer Motion entrance animations.
-- **`/submit` Submit Claim** — reads platform key from chain, encrypts evidence in-browser, calls `submit_claim(envelope, paddedPlaintext)`, displays tx id and the new `latest_evidence_hash`.
-- **`/dashboard` Dashboard** — two modes:
+- **`/` Landing**: product pitch, three-step how-it-works, Midnight explainer, Framer Motion entrance animations.
+- **`/submit` Submit Claim**: reads platform key from chain, encrypts evidence in-browser, calls `submit_claim(envelope, paddedPlaintext)`, displays tx id and the new `latest_evidence_hash`.
+- **`/dashboard` Dashboard**: two modes:
   - *Not registered:* generate keypair, warn about `localStorage`, call `register_platform`.
   - *Registered:* verify browser-stored SK derives to the on-chain PK; decrypt each envelope; per-claim `claimType` selector; call `fetchVerdict` (real AI, with spinner + retry on error); post the padded verdict JSON via `post_verdict`.
-- **`/verify` Verify** — no wallet; SHA-256 of padded plaintext vs on-chain hash; caveat about `persistentHash` domain separator surfaced in the UI.
-- **`/deploy` Deploy** — admin route calling `deployRedressContract`; reminds admin to update `CONTRACT_ADDRESS` in `sdk/src/chain.ts`.
+- **`/verify` Verify**: no wallet; SHA-256 of padded plaintext vs on-chain hash; caveat about `persistentHash` domain separator surfaced in the UI.
+- **`/deploy` Deploy**: admin route calling `deployRedressContract`; reminds admin to update `CONTRACT_ADDRESS` in `sdk/src/chain.ts`.
 
 Design system: warm palette (burnt sienna `#B8432F`, parchment `#F5F0E8`, forest green `#2D6A4F`); Fraunces + Inter + IBM Plex Mono; lucide-react icons stroke 1.5; no purple, no gradients, no glow effects. All colors resolve through CSS custom properties in `frontend/src/styles/tokens.css` (no raw Tailwind color classes in JSX).
 
@@ -47,7 +47,7 @@ Design system: warm palette (burnt sienna `#B8432F`, parchment `#F5F0E8`, forest
 ### Infrastructure
 
 - Monorepo with npm workspaces (`contract`, `sdk`, `frontend`, `verdict-worker`).
-- Root `overrides` pinning `@midnight-ntwrk/wallet-sdk 1.2.0`, `ledger-v8 8.1.0`, `onchain-runtime-v3 3.0.0` — prevents the duplicate-package `instanceof` failures that hit Anonymous Whispers.
+- Root `overrides` pinning `@midnight-ntwrk/wallet-sdk 1.2.0`, `ledger-v8 8.1.0`, `onchain-runtime-v3 3.0.0`: prevents the duplicate-package `instanceof` failures that hit Anonymous Whispers.
 - GitHub Actions CI: three-job pipeline (contract test, SDK test, frontend build) on push and PR to `main`.
 - Vite 8 with `optimizeDeps.exclude` for the three WASM Midnight packages. No `vite-plugin-wasm` (SIGBUS on Vite 8).
 - `Buffer` polyfill as the first import in `main.tsx` (ES import hoisting requirement).

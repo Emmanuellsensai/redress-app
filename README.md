@@ -1,18 +1,18 @@
-# Redress — Privacy-Preserving Claims Infrastructure on Midnight
+# Redress: Privacy-Preserving Claims Infrastructure on Midnight
 
 Private claims. Verifiable verdicts.
 
-Built for the [Midnight Network Buildathon](https://akindo.io) — Wave 1 (August 27 – September 16, 2026).
+Built for the [Midnight Network Buildathon](https://akindo.io). Wave 1 (August 27 to September 16, 2026).
 
 ---
 
 ## 1. What is Redress?
 
-RedressApp is a drop-in SDK and Compact smart contract that lets any fintech, marketplace, or platform handle user claims — fraud reports, refund requests, chargebacks, KYC exceptions, account appeals — with cryptographically private evidence and AI-issued verdicts, auditable to regulators without the app itself ever holding the sensitive data in plaintext. Built on Midnight's dual-ledger model using zero-knowledge proofs.
+RedressApp is a drop-in SDK and Compact smart contract that lets any fintech, marketplace, or platform handle user claims (fraud reports, refund requests, chargebacks, KYC exceptions, account appeals) with cryptographically private evidence and AI-issued verdicts, auditable to regulators without the app itself ever holding the sensitive data in plaintext. Built on Midnight's dual-ledger model using zero-knowledge proofs.
 
 ## 2. The Problem
 
-Every consumer app has a "contact support" or "dispute this transaction" button. Behind it, users email screenshots of bank statements, share chat logs with strangers in support inboxes, and expose sensitive evidence to public arbitration. Companies custody that evidence forever. Regulators cannot audit without a full data dump. Nobody is happy — not the user, not the operator, not the regulator.
+Every consumer app has a "contact support" or "dispute this transaction" button. Behind it, users email screenshots of bank statements, share chat logs with strangers in support inboxes, and expose sensitive evidence to public arbitration. Companies custody that evidence forever. Regulators cannot audit without a full data dump. Nobody is happy: not the user, not the operator, not the regulator.
 
 ## 3. How Redress Solves It
 
@@ -34,10 +34,10 @@ Three steps:
 ## 5. Privacy Model
 
 **Public ledger** (`export ledger` fields on the contract):
-- `claim_count`, `verdict_count` — Counters
-- `platform_public_key`, `platform_key_version` — curve25519 public key (safe to disclose by construction) and its rotation counter
-- `evidence_inbox` — list of 512-byte encrypted envelopes (unreadable without the platform's secret key)
-- `latest_evidence_hash`, `latest_verdict_hash` — one-way hash commitments
+- `claim_count`, `verdict_count`: Counters
+- `platform_public_key`, `platform_key_version`: curve25519 public key (safe to disclose by construction) and its rotation counter
+- `evidence_inbox`: list of 512-byte encrypted envelopes (unreadable without the platform's secret key)
+- `latest_evidence_hash`, `latest_verdict_hash`: one-way hash commitments
 
 **Private inputs** (witnesses to the ZK circuit):
 - Evidence plaintext (256-byte padded)
@@ -45,7 +45,7 @@ Three steps:
 
 `persistentHash` is computed **in-circuit** over the private witness, and only the hash is disclosed into the public ledger. The ZK proof enforces that a caller cannot post an arbitrary hash without knowing the preimage.
 
-Envelope encryption uses a single-use ephemeral curve25519 keypair per submission, so **sender identity is cryptographically unrecoverable** — the ephemeral secret key is discarded after encryption and never touches storage or the chain.
+Envelope encryption uses a single-use ephemeral curve25519 keypair per submission, so **sender identity is cryptographically unrecoverable**. The ephemeral secret key is discarded after encryption and never touches storage or the chain.
 
 ## 6. Tech Stack
 
@@ -64,7 +64,7 @@ Envelope encryption uses a single-use ephemeral curve25519 keypair per submissio
 - npm
 - 1am wallet or Lace Midnight extension in a Chromium browser
 - Gemini and/or Groq API key for the verdict worker
-- Linux/macOS (or WSL on Windows) to compile the Compact contract — the Compact toolchain has no native Windows binary
+- Linux/macOS (or WSL on Windows) to compile the Compact contract. The Compact toolchain has no native Windows binary.
 
 ## 8. Setup and Run
 
@@ -99,9 +99,9 @@ Open http://localhost:5173.
 
 Three circuits, all binding private witnesses to public commitments via `persistentHash`:
 
-- `register_platform(new_public_key: Bytes<32>)` — publishes the platform's curve25519 public key so claimants can encrypt evidence to it.
-- `submit_claim(encrypted_evidence: Bytes<512>, evidence_plaintext: Bytes<256>)` — appends the sealed envelope to the public inbox and commits `persistentHash(evidence_plaintext)` to `latest_evidence_hash`. The plaintext witness never leaves the circuit.
-- `post_verdict(verdict_text: Bytes<256>)` — commits `persistentHash(verdict_text)` to `latest_verdict_hash`. The verdict reasoning is private; only the hash is public.
+- `register_platform(new_public_key: Bytes<32>)`: publishes the platform's curve25519 public key so claimants can encrypt evidence to it.
+- `submit_claim(encrypted_evidence: Bytes<512>, evidence_plaintext: Bytes<256>)`: appends the sealed envelope to the public inbox and commits `persistentHash(evidence_plaintext)` to `latest_evidence_hash`. The plaintext witness never leaves the circuit.
+- `post_verdict(verdict_text: Bytes<256>)`: commits `persistentHash(verdict_text)` to `latest_verdict_hash`. The verdict reasoning is private; only the hash is public.
 
 Full source with inline privacy analysis: [`contract/src/redress.compact`](contract/src/redress.compact).
 
@@ -141,14 +141,14 @@ Then rebuild the frontend and redeploy.
 
 ## 13. Wave 1 Scope and Roadmap
 
-- **Wave 1 (this submission)** — single-party claim reporting, in-browser encryption, AI verdicts, on-chain hash commitments, regulator verification.
-- **Wave 2 (planned)** — two-party disputes, encrypted file evidence beyond text, multi-model verdict panel.
-- **Wave 3 (planned)** — human reviewer marketplace with reputation, pilot integration with a Midnight-native app.
+- **Wave 1 (this submission):** single-party claim reporting, in-browser encryption, AI verdicts, on-chain hash commitments, regulator verification.
+- **Wave 2 (planned):** two-party disputes, encrypted file evidence beyond text, multi-model verdict panel.
+- **Wave 3 (planned):** human reviewer marketplace with reputation, pilot integration with a Midnight-native app.
 
 ## 14. License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache 2.0. See [LICENSE](LICENSE).
 
 ## 15. Team
 
-Redress Labs. Solo builder: Emmanuel — [@Emmanuellsensai](https://github.com/Emmanuellsensai).
+Redress Labs. Solo builder: Emmanuel, [@Emmanuellsensai](https://github.com/Emmanuellsensai).
