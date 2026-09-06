@@ -5,24 +5,18 @@ import {
   connectToContract,
   generatePlatformKeypair,
   openEvidence,
-  padEvidence,
   readPublicState,
   redressCallTx,
   stripPadding,
   type PublicState,
-  type Verdict,
-  type ClaimType,
 } from '@redress/sdk';
-import { fetchVerdict } from '../lib/verdict-client';
 import {
   KeyRound,
-  Lock,
-  Unlock,
-  Sparkles,
   Send,
   AlertCircle,
-  CheckCircle2,
-  Copy,
+  Unlock,
+  Lock,
+  Inbox,
 } from 'lucide-react';
 import WalletConnect from '../components/WalletConnect';
 import { errorText } from '../lib/errorText';
@@ -30,27 +24,20 @@ import { fromHex, toHex, truncateHex } from '../lib/hex';
 
 const SK_STORAGE_KEY = 'redress_platform_sk';
 
-type ClaimSlot = {
-  index: number;
-  envelope: Uint8Array;
-  plaintext?: string;
-  claimType: ClaimType;
-  verdict?: Verdict;
-  verdicting?: boolean;
-  verdictError?: string;
-  posting?: boolean;
-  verdictHash?: string;
-  error?: string;
-};
-
-const CLAIM_TYPE_OPTIONS: { value: ClaimType; label: string }[] = [
-  { value: 'fraud', label: 'Fraud' },
-  { value: 'refund', label: 'Refund' },
-  { value: 'chargeback', label: 'Chargeback' },
-  { value: 'kyc_exception', label: 'KYC exception' },
-  { value: 'account_appeal', label: 'Account appeal' },
-];
-
+/**
+ * The platform-side view.
+ *
+ * With the reporter-centric flow, adjudication happens on the claimant's
+ * device: they see the AI verdict, decide, and post the verdict on-chain
+ * themselves. The platform is a **passive receiver** of those decisions.
+ *
+ * This page shows:
+ *   - Registration (first time): generate keypair, publish public key.
+ *   - Inbox: every sealed envelope on-chain, plus counts of claims and
+ *     verdicts. Ops can decrypt any envelope locally to inspect the
+ *     underlying evidence for auditing, but they don't need to post any
+ *     transactions — the reporters do that.
+ */
 export default function Dashboard() {
   const [state, setState] = useState<PublicState | null>(null);
   const [loadingState, setLoadingState] = useState(true);
@@ -62,20 +49,12 @@ export default function Dashboard() {
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [pendingKeypair, setPendingKeypair] = useState<nacl.BoxKeyPair | null>(null);
 
-  const [claims, setClaims] = useState<ClaimSlot[]>([]);
+  const [decrypted, setDecrypted] = useState<Record<number, string>>({});
 
   const refresh = async () => {
     try {
       const s = await readPublicState();
       setState(s);
-      if (s) {
-        setClaims((prev) =>
-          s.evidenceInbox.map((envelope, index) => {
-            const existing = prev.find((p) => p.index === index);
-            return existing ?? { index, envelope, claimType: 'fraud' };
-          }),
-        );
-      }
     } finally {
       setLoadingState(false);
     }
@@ -101,10 +80,7 @@ export default function Dashboard() {
     derivedPk.length === state.platformPublicKey.length &&
     derivedPk.every((b, i) => b === state.platformPublicKey![i]);
 
-  const generateKeys = () => {
-    const kp = generatePlatformKeypair();
-    setPendingKeypair(kp);
-  };
+  const generateKeys = () => setPendingKeypair(generatePlatformKeypair());
 
   const registerOnChain = async () => {
     if (!api || !accountId || !pendingKeypair) return;
@@ -124,92 +100,27 @@ export default function Dashboard() {
     }
   };
 
-  const decrypt = (idx: number) => {
+  const decrypt = (idx: number, envelope: Uint8Array) => {
     if (!storedSkHex) return;
-    setClaims((prev) =>
-      prev.map((c) => {
-        if (c.index !== idx) return c;
-        try {
-          const sk = fromHex(storedSkHex);
-          const opened = openEvidence(c.envelope, sk);
-          if (!opened) return { ...c, error: 'Decryption failed (wrong key)' };
-          const text = new TextDecoder().decode(stripPadding(opened));
-          return { ...c, plaintext: text, error: undefined };
-        } catch (err) {
-          return { ...c, error: errorText(err) };
-        }
-      }),
-    );
-  };
-
-  const setClaimType = (idx: number, claimType: ClaimType) => {
-    setClaims((prev) => prev.map((c) => (c.index === idx ? { ...c, claimType } : c)));
-  };
-
-  const runVerdict = async (idx: number) => {
-    const claim = claims.find((c) => c.index === idx);
-    if (!claim?.plaintext) return;
-    setClaims((prev) =>
-      prev.map((c) => (c.index === idx ? { ...c, verdicting: true, verdictError: undefined } : c)),
-    );
     try {
-      const verdict = await fetchVerdict(claim.plaintext, claim.claimType);
-      setClaims((prev) =>
-        prev.map((c) => (c.index === idx ? { ...c, verdicting: false, verdict } : c)),
-      );
+      const opened = openEvidence(envelope, fromHex(storedSkHex));
+      if (!opened) {
+        setDecrypted((d) => ({ ...d, [idx]: '(decryption failed)' }));
+        return;
+      }
+      const text = new TextDecoder().decode(stripPadding(opened));
+      setDecrypted((d) => ({ ...d, [idx]: text }));
     } catch (err) {
-      setClaims((prev) =>
-        prev.map((c) =>
-          c.index === idx ? { ...c, verdicting: false, verdictError: errorText(err) } : c,
-        ),
-      );
-    }
-  };
-
-  const postVerdict = async (idx: number) => {
-    if (!api || !accountId) return;
-    const claim = claims.find((c) => c.index === idx);
-    if (!claim?.verdict) return;
-
-    setClaims((prev) => prev.map((c) => (c.index === idx ? { ...c, posting: true, error: undefined } : c)));
-    try {
-      // Compact serialization of the verdict; padded to 256 bytes.
-      const verdictBlob = JSON.stringify({
-        d: claim.verdict.decision,
-        c: claim.verdict.confidence,
-        r: claim.verdict.reasoning,
-        t: claim.verdict.claimType,
-        ts: claim.verdict.timestamp,
-      });
-      const padded = padEvidence(new TextEncoder().encode(verdictBlob));
-      const contract = await connectToContract(api, accountId);
-      await redressCallTx(contract).post_verdict(padded);
-      const updated = await readPublicState();
-      setState(updated);
-      setClaims((prev) =>
-        prev.map((c) =>
-          c.index === idx
-            ? {
-                ...c,
-                posting: false,
-                verdictHash: updated ? toHex(updated.latestVerdictHash) : '(unknown)',
-              }
-            : c,
-        ),
-      );
-    } catch (err) {
-      setClaims((prev) =>
-        prev.map((c) => (c.index === idx ? { ...c, posting: false, error: errorText(err) } : c)),
-      );
+      setDecrypted((d) => ({ ...d, [idx]: errorText(err) }));
     }
   };
 
   return (
-    <main className="container" style={{ padding: '48px 0', maxWidth: 900 }}>
-      <h1 style={{ fontSize: 32, marginBottom: 12 }}>Platform Dashboard</h1>
+    <main className="container" style={{ padding: '48px 0 80px', maxWidth: 900 }}>
+      <h1 style={{ fontSize: 34, marginBottom: 12 }}>Platform Dashboard</h1>
       <p style={{ color: 'var(--color-ink-muted)', marginBottom: 24 }}>
-        Register your platform, decrypt incoming claims, adjudicate with the AI verdict worker,
-        and post verdict commitments on-chain.
+        Register your platform, then watch claims resolve. Reporters drive the adjudication and
+        commit verdicts themselves; you receive them and act on the decisions.
       </p>
 
       <div style={{ marginBottom: 24 }}>
@@ -240,50 +151,64 @@ export default function Dashboard() {
           canRegister={!!api && !!accountId}
           error={registerError}
         />
-      ) : !isRegisteredPlatform ? (
-        <div className="card">
-          <AlertCircle
-            size={16}
-            strokeWidth={1.5}
-            style={{ color: 'var(--color-warning)', marginRight: 6, verticalAlign: 'middle' }}
-          />
-          A different platform is registered on-chain, or you have no secret key in this browser.
-          You cannot decrypt these claims.
-          <div style={{ marginTop: 12, fontSize: 13, color: 'var(--color-ink-muted)' }}>
-            Registered public key:{' '}
-            <span className="mono">{truncateHex(toHex(state.platformPublicKey), 8, 6)}</span>
-          </div>
-        </div>
       ) : (
         <>
-          <div className="card" style={{ marginBottom: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span className="dot" style={{ background: 'var(--color-success)' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 500 }}>Registered platform</div>
-                <div style={{ fontSize: 13, color: 'var(--color-ink-muted)' }}>
-                  {claims.length} claim{claims.length === 1 ? '' : 's'} in inbox
-                </div>
-              </div>
-              <div className="mono" style={{ fontSize: 12 }}>
-                {truncateHex(toHex(state.platformPublicKey), 8, 6)}
-              </div>
-            </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: 8,
+              marginBottom: 20,
+            }}
+          >
+            <Metric label="Claims received" value={String(state.claimCount)} />
+            <Metric label="Verdicts posted" value={String(state.verdictCount)} />
+            <Metric
+              label="Platform key"
+              mono
+              value={truncateHex(toHex(state.platformPublicKey), 8, 6)}
+            />
           </div>
 
-          {claims.length === 0 ? (
+          {isRegisteredPlatform ? (
+            <div className="card" style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="dot" style={{ background: 'var(--color-success)' }} />
+                <div style={{ fontWeight: 600 }}>You are the registered platform.</div>
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--color-ink-muted)', marginTop: 6 }}>
+                Your platform secret key is stored in this browser. Claims are encrypted to it and
+                can be decrypted below for auditing.
+              </div>
+            </div>
+          ) : (
+            <div className="card" style={{ marginBottom: 20 }}>
+              <AlertCircle size={16} strokeWidth={1.5} style={{ color: 'var(--color-warning)', marginRight: 6, verticalAlign: 'middle' }} />
+              A different platform is registered on-chain, or you have no secret key in this
+              browser. You can still see the on-chain metadata below, but envelopes cannot be
+              decrypted here.
+            </div>
+          )}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '28px 0 12px' }}>
+            <Inbox size={18} strokeWidth={1.6} />
+            <h2 style={{ fontSize: 20, margin: 0 }}>
+              Inbox ({state.evidenceInbox.length} sealed envelope{state.evidenceInbox.length === 1 ? '' : 's'})
+            </h2>
+          </div>
+
+          {state.evidenceInbox.length === 0 ? (
             <div className="card">No claims yet.</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {claims.map((claim) => (
-                <ClaimCard
-                  key={claim.index}
-                  claim={claim}
-                  onDecrypt={() => decrypt(claim.index)}
-                  onClaimTypeChange={(t) => setClaimType(claim.index, t)}
-                  onGetVerdict={() => runVerdict(claim.index)}
-                  onPostVerdict={() => postVerdict(claim.index)}
-                  canPost={!!api && !!accountId}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {state.evidenceInbox.map((envelope, index) => (
+                <EnvelopeRow
+                  key={index}
+                  index={index}
+                  envelope={envelope}
+                  decryptedText={decrypted[index]}
+                  canDecrypt={isRegisteredPlatform}
+                  onDecrypt={() => decrypt(index, envelope)}
                 />
               ))}
             </div>
@@ -291,6 +216,117 @@ export default function Dashboard() {
         </>
       )}
     </main>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        padding: '18px 4px 18px 18px',
+        borderLeft: '2px solid var(--color-border)',
+      }}
+    >
+      <div
+        style={{
+          fontFamily: mono ? 'var(--font-mono)' : 'var(--font-display)',
+          fontSize: mono ? 15 : 32,
+          fontWeight: 700,
+          letterSpacing: '-0.02em',
+          lineHeight: 1,
+          marginBottom: 8,
+        }}
+      >
+        {value}
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--color-ink-muted)' }}>{label}</div>
+    </div>
+  );
+}
+
+function EnvelopeRow({
+  index,
+  envelope,
+  decryptedText,
+  canDecrypt,
+  onDecrypt,
+}: {
+  index: number;
+  envelope: Uint8Array;
+  decryptedText?: string;
+  canDecrypt: boolean;
+  onDecrypt: () => void;
+}) {
+  return (
+    <div className="card">
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+        }}
+      >
+        <div style={{ fontWeight: 600 }}>Envelope #{index + 1}</div>
+        {decryptedText ? (
+          <span
+            style={{
+              display: 'inline-flex',
+              gap: 6,
+              alignItems: 'center',
+              fontSize: 12,
+              color: 'var(--color-success)',
+            }}
+          >
+            <Unlock size={12} strokeWidth={1.5} /> Decrypted
+          </span>
+        ) : (
+          <span
+            style={{
+              display: 'inline-flex',
+              gap: 6,
+              alignItems: 'center',
+              fontSize: 12,
+              color: 'var(--color-ink-muted)',
+            }}
+          >
+            <Lock size={12} strokeWidth={1.5} /> Sealed
+          </span>
+        )}
+      </div>
+
+      {decryptedText ? (
+        <div
+          style={{
+            padding: 12,
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 6,
+            fontSize: 14,
+            lineHeight: 1.5,
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {decryptedText}
+        </div>
+      ) : (
+        <button className="btn btn-ghost" onClick={onDecrypt} disabled={!canDecrypt}>
+          <Unlock size={14} strokeWidth={1.5} /> Decrypt for audit
+        </button>
+      )}
+
+      <div style={{ marginTop: 10, fontSize: 11, color: 'var(--color-ink-muted)' }}>
+        Ciphertext {envelope.byteLength} bytes
+      </div>
+    </div>
   );
 }
 
@@ -311,16 +347,15 @@ function RegisterPanel({
 }) {
   return (
     <div className="card">
-      <h2 style={{ fontSize: 20, marginBottom: 8 }}>Register your platform</h2>
+      <h2 style={{ fontSize: 22, marginBottom: 8 }}>Register your platform</h2>
       <p style={{ fontSize: 14, color: 'var(--color-ink-muted)', marginBottom: 16 }}>
-        Generate a curve25519 keypair. The public key is registered on-chain so claimants can
-        encrypt evidence to you; the secret key stays in this browser only.
+        Generate a curve25519 keypair. The public key is published on-chain so claimants can encrypt
+        evidence to you; the secret key stays in this browser only.
       </p>
 
       {!pendingKeypair ? (
         <button className="btn btn-ghost" onClick={onGenerate}>
-          <KeyRound size={14} strokeWidth={1.5} />
-          Generate keypair
+          <KeyRound size={14} strokeWidth={1.5} /> Generate keypair
         </button>
       ) : (
         <>
@@ -357,211 +392,7 @@ function RegisterPanel({
       )}
 
       {error && (
-        <div style={{ marginTop: 12, fontSize: 13, color: 'var(--color-accent)' }}>{error}</div>
-      )}
-    </div>
-  );
-}
-
-function ClaimCard({
-  claim,
-  onDecrypt,
-  onClaimTypeChange,
-  onGetVerdict,
-  onPostVerdict,
-  canPost,
-}: {
-  claim: ClaimSlot;
-  onDecrypt: () => void;
-  onClaimTypeChange: (t: ClaimType) => void;
-  onGetVerdict: () => void;
-  onPostVerdict: () => void;
-  canPost: boolean;
-}) {
-  return (
-    <div className="card">
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 12,
-        }}
-      >
-        <div style={{ fontWeight: 600 }}>Claim #{claim.index + 1}</div>
-        {claim.plaintext ? (
-          <span
-            style={{
-              display: 'inline-flex',
-              gap: 6,
-              alignItems: 'center',
-              fontSize: 12,
-              color: 'var(--color-success)',
-            }}
-          >
-            <Unlock size={12} strokeWidth={1.5} /> Decrypted
-          </span>
-        ) : (
-          <span
-            style={{
-              display: 'inline-flex',
-              gap: 6,
-              alignItems: 'center',
-              fontSize: 12,
-              color: 'var(--color-ink-muted)',
-            }}
-          >
-            <Lock size={12} strokeWidth={1.5} /> Sealed
-          </span>
-        )}
-      </div>
-
-      {!claim.plaintext ? (
-        <button className="btn btn-ghost" onClick={onDecrypt}>
-          <Unlock size={14} strokeWidth={1.5} /> Decrypt
-        </button>
-      ) : (
-        <>
-          <div style={{ fontSize: 13, color: 'var(--color-ink-muted)', marginBottom: 6 }}>
-            Evidence
-          </div>
-          <div
-            style={{
-              padding: 12,
-              background: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 4,
-              fontSize: 14,
-              lineHeight: 1.5,
-              marginBottom: 16,
-              whiteSpace: 'pre-wrap',
-            }}
-          >
-            {claim.plaintext}
-          </div>
-
-          {!claim.verdict ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div className="field" style={{ marginBottom: 0 }}>
-                <label htmlFor={`ct-${claim.index}`}>Claim type</label>
-                <select
-                  id={`ct-${claim.index}`}
-                  value={claim.claimType}
-                  onChange={(e) => onClaimTypeChange(e.target.value as ClaimType)}
-                  disabled={claim.verdicting}
-                >
-                  {CLAIM_TYPE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <button
-                  className="btn btn-primary"
-                  onClick={onGetVerdict}
-                  disabled={claim.verdicting}
-                >
-                  {claim.verdicting ? (
-                    <span className="spinner" />
-                  ) : (
-                    <Sparkles size={14} strokeWidth={1.5} />
-                  )}
-                  {claim.verdicting
-                    ? 'Adjudicating…'
-                    : claim.verdictError
-                      ? 'Retry AI verdict'
-                      : 'Get AI verdict'}
-                </button>
-              </div>
-              {claim.verdictError && (
-                <div style={{ fontSize: 13, color: 'var(--color-accent)' }}>
-                  <AlertCircle
-                    size={12}
-                    strokeWidth={1.5}
-                    style={{ verticalAlign: 'middle', marginRight: 4 }}
-                  />
-                  {claim.verdictError}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="card-verdict" style={{ marginBottom: 12 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  marginBottom: 8,
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: 22,
-                    color:
-                      claim.verdict.decision === 'approved'
-                        ? 'var(--color-success)'
-                        : claim.verdict.decision === 'denied'
-                        ? 'var(--color-accent)'
-                        : 'var(--color-warning)',
-                  }}
-                >
-                  {claim.verdict.decision.toUpperCase()}
-                </span>
-                <span style={{ fontSize: 13, color: 'var(--color-ink-muted)' }}>
-                  confidence {(claim.verdict.confidence * 100).toFixed(0)}%
-                </span>
-              </div>
-              <p style={{ fontSize: 14, lineHeight: 1.55 }}>{claim.verdict.reasoning}</p>
-              {!claim.verdictHash && (
-                <button
-                  className="btn btn-primary"
-                  onClick={onPostVerdict}
-                  disabled={claim.posting || !canPost}
-                  style={{ marginTop: 12 }}
-                >
-                  {claim.posting ? <span className="spinner" /> : <Send size={14} strokeWidth={1.5} />}
-                  {claim.posting ? 'Posting…' : 'Post verdict on-chain'}
-                </button>
-              )}
-              {claim.verdictHash && (
-                <>
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: 6,
-                      alignItems: 'center',
-                      marginTop: 12,
-                      color: 'var(--color-success)',
-                      fontSize: 13,
-                      fontWeight: 500,
-                    }}
-                  >
-                    <CheckCircle2 size={14} strokeWidth={1.5} /> Verdict posted
-                  </div>
-                  <div className="hash" style={{ marginTop: 8 }}>
-                    {claim.verdictHash}
-                    <button
-                      className="btn btn-ghost"
-                      style={{ padding: '2px 6px', marginLeft: 8, fontSize: 11 }}
-                      onClick={() => navigator.clipboard.writeText(claim.verdictHash!)}
-                    >
-                      <Copy size={11} strokeWidth={1.5} />
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </>
-      )}
-
-      {claim.error && (
-        <div style={{ marginTop: 10, fontSize: 13, color: 'var(--color-accent)' }}>
-          {claim.error}
-        </div>
+        <div style={{ marginTop: 12, fontSize: 13, color: 'var(--color-warning)' }}>{error}</div>
       )}
     </div>
   );

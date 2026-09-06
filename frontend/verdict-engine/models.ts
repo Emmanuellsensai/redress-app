@@ -7,10 +7,22 @@ type RawVerdict = {
   reasoning: string;
 };
 
-/**
- * Call Gemini (Google Generative AI).
- * Requires GEMINI_API_KEY environment variable.
- */
+/** Gemini model IDs to try in order. When Google renames or deprecates a
+ *  model, we walk to the next one before failing over to Groq. */
+const GEMINI_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+];
+
+/** Groq model IDs to try in order. Groq's catalog moves faster than
+ *  Gemini's; keep this list in sync with https://console.groq.com/models. */
+const GROQ_MODELS = [
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
+  'openai/gpt-oss-20b',
+];
+
 export const callGemini = async (
   evidence: string,
   claimType: ClaimType,
@@ -20,27 +32,29 @@ export const callGemini = async (
 
   const { GoogleGenerativeAI } = await import('@google/generative-ai');
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
-
   const { system, user } = buildPrompt(evidence, claimType);
 
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: user }] }],
-    systemInstruction: { role: 'system', parts: [{ text: system }] },
-    generationConfig: {
-      responseMimeType: 'application/json',
-      temperature: 0.3,
-    },
-  });
-
-  const text = result.response.text();
-  return parseVerdictResponse(text);
+  const attempts: string[] = [];
+  for (const modelId of GEMINI_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelId });
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: user }] }],
+        systemInstruction: { role: 'system', parts: [{ text: system }] },
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.3,
+        },
+      });
+      const text = result.response.text();
+      return parseVerdictResponse(text);
+    } catch (err) {
+      attempts.push(`${modelId}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  throw new Error(`Gemini failed for every model. Attempts:\n${attempts.join('\n')}`);
 };
 
-/**
- * Call Groq (fallback).
- * Requires GROQ_API_KEY environment variable.
- */
 export const callGroq = async (
   evidence: string,
   claimType: ClaimType,
@@ -50,22 +64,28 @@ export const callGroq = async (
 
   const Groq = (await import('groq-sdk')).default;
   const groq = new Groq({ apiKey });
-
   const { system, user } = buildPrompt(evidence, claimType);
 
-  const completion = await groq.chat.completions.create({
-    model: 'llama-3.1-8b-instant',
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: user },
-    ],
-    temperature: 0.3,
-    response_format: { type: 'json_object' },
-  });
-
-  const text = completion.choices[0]?.message?.content;
-  if (!text) throw new Error('Groq returned empty response');
-  return parseVerdictResponse(text);
+  const attempts: string[] = [];
+  for (const modelId of GROQ_MODELS) {
+    try {
+      const completion = await groq.chat.completions.create({
+        model: modelId,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+        temperature: 0.3,
+        response_format: { type: 'json_object' },
+      });
+      const text = completion.choices[0]?.message?.content;
+      if (!text) throw new Error('Groq returned empty response');
+      return parseVerdictResponse(text);
+    } catch (err) {
+      attempts.push(`${modelId}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  throw new Error(`Groq failed for every model. Attempts:\n${attempts.join('\n')}`);
 };
 
 const parseVerdictResponse = (text: string): RawVerdict => {
@@ -91,29 +111,25 @@ const parseVerdictResponse = (text: string): RawVerdict => {
   }
 
   const reasoning = String(obj.reasoning || '');
-  if (reasoning.length === 0) {
-    throw new Error('Empty reasoning');
-  }
+  if (reasoning.length === 0) throw new Error('Empty reasoning');
 
   return { decision, confidence, reasoning };
 };
 
-/** Try Gemini first, fall back to Groq. */
 export const getVerdict = async (
   evidence: string,
   claimType: ClaimType,
 ): Promise<RawVerdict> => {
+  const errors: string[] = [];
   try {
     return await callGemini(evidence, claimType);
-  } catch (geminiError) {
-    console.error('Gemini failed, falling back to Groq:', geminiError);
-    try {
-      return await callGroq(evidence, claimType);
-    } catch (groqError) {
-      console.error('Groq also failed:', groqError);
-      throw new Error(
-        `Both AI providers failed. Gemini: ${String(geminiError)}. Groq: ${String(groqError)}`,
-      );
-    }
+  } catch (err) {
+    errors.push(`Gemini: ${err instanceof Error ? err.message : String(err)}`);
   }
+  try {
+    return await callGroq(evidence, claimType);
+  } catch (err) {
+    errors.push(`Groq: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  throw new Error(`All providers failed.\n${errors.join('\n---\n')}`);
 };
