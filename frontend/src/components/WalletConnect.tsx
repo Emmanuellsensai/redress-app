@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ConnectedAPI } from '@midnight-ntwrk/dapp-connector-api';
 import { Wallet, Plug, LogOut, AlertCircle } from 'lucide-react';
 import { errorText } from '../lib/errorText';
@@ -28,20 +28,78 @@ type Props = {
   onDisconnect?: () => void;
 };
 
+/**
+ * Wallet extensions inject `window.midnight` asynchronously, after the page
+ * script has already run. A one-shot read on mount misses it whenever the
+ * injection lands late (fresh page load, first visit to a new origin), so we
+ * poll until the provider appears and re-check on window focus: enabling or
+ * unlocking the wallet and returning to the tab then works without a manual
+ * reload.
+ */
+const DETECT_POLL_INTERVAL_MS = 100;
+const DETECT_POLL_TIMEOUT_MS = 5000;
+
 export default function WalletConnect({ onConnect, onDisconnect }: Props) {
   const [available, setAvailable] = useState<{ oneAm: boolean; lace: boolean }>({
     oneAm: false,
     lace: false,
   });
+  const [detecting, setDetecting] = useState(true);
   const [connecting, setConnecting] = useState<WalletKind | null>(null);
   const [connectedKind, setConnectedKind] = useState<WalletKind | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const detect = useCallback((): boolean => {
     const mw = (window as unknown as MidnightWindow).midnight;
-    setAvailable({ oneAm: !!mw?.mn1am, lace: !!mw?.mnLace });
+    const next = { oneAm: !!mw?.mn1am, lace: !!mw?.mnLace };
+    setAvailable(next);
+    return next.oneAm || next.lace;
   }, []);
+
+  useEffect(() => {
+    let pollTimer: number | undefined;
+
+    const clearPoll = () => {
+      if (pollTimer !== undefined) {
+        window.clearTimeout(pollTimer);
+        pollTimer = undefined;
+      }
+    };
+
+    const found = () => {
+      clearPoll();
+      setDetecting(false);
+    };
+
+    const startedAt = Date.now();
+    const poll = () => {
+      if (detect()) {
+        found();
+        return;
+      }
+      if (Date.now() - startedAt >= DETECT_POLL_TIMEOUT_MS) {
+        setDetecting(false);
+        return;
+      }
+      pollTimer = window.setTimeout(poll, DETECT_POLL_INTERVAL_MS);
+    };
+
+    // Re-check when the tab regains focus: the wallet may have been enabled
+    // or unlocked since the page loaded. Stays attached after polling times
+    // out, so a later focus can still pick the wallet up without a reload.
+    const onFocus = () => {
+      if (detect()) found();
+    };
+    window.addEventListener('focus', onFocus);
+
+    poll();
+
+    return () => {
+      clearPoll();
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [detect]);
 
   const connect = async (kind: WalletKind) => {
     setError(null);
@@ -109,6 +167,20 @@ export default function WalletConnect({ onConnect, onDisconnect }: Props) {
     );
   }
 
+  if (detecting) {
+    return (
+      <div className="card" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <span className="spinner" />
+        <div>
+          <div style={{ fontWeight: 500 }}>Looking for your Midnight wallet…</div>
+          <div style={{ fontSize: 13, color: 'var(--color-ink-muted)' }}>
+            Detecting the 1am or Lace extension…
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!available.oneAm && !available.lace) {
     return (
       <div className="card" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
@@ -119,7 +191,7 @@ export default function WalletConnect({ onConnect, onDisconnect }: Props) {
         />
         <div>
           <div style={{ fontWeight: 500, marginBottom: 4 }}>No Midnight wallet detected</div>
-          <div style={{ fontSize: 13, color: 'var(--color-ink-muted)' }}>
+          <div style={{ fontSize: 13, color: 'var(--color-ink-muted)', lineHeight: 1.55 }}>
             Install the{' '}
             <a
               href="https://docs.midnight.network/develop/nodes-and-dapps/wallet/1am"
@@ -129,7 +201,25 @@ export default function WalletConnect({ onConnect, onDisconnect }: Props) {
             >
               1am wallet
             </a>{' '}
-            or the Lace Midnight extension, then reload this page.
+            or the Lace Midnight extension, then reload this page. The wallet injects itself
+            shortly after page load, so a reload often fixes a missed detection.
+          </div>
+          <div
+            style={{
+              marginTop: 10,
+              paddingTop: 10,
+              borderTop: '1px solid var(--color-border)',
+              fontSize: 12,
+              color: 'var(--color-ink-muted)',
+              lineHeight: 1.55,
+            }}
+          >
+            Still stuck? Run{' '}
+            <span className="mono">!!window.midnight</span> in the browser console:{' '}
+            <span className="mono">false</span> means the wallet never injected on this site —
+            check the extension is enabled for this origin, or run the app locally at{' '}
+            <span className="mono">localhost:5173</span>, the most reliably supported origin for
+            the 1am wallet.
           </div>
         </div>
       </div>
