@@ -15,9 +15,12 @@ body {
 
 h1, h2, h3, h4 {
   font-family: var(--font-display);
-  font-weight: 600;
-  line-height: 1.15;
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
 }
+
+h1 { font-weight: 800; }
 
 code, pre, .mono {
   font-family: var(--font-mono);

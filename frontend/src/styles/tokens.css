@@ -1,16 +1,29 @@
 :root {
-  --color-surface:       #FAFAF8;
-  --color-surface-alt:   #F0EEEA;
-  --color-ink:           #1A1A18;
-  --color-ink-muted:     #6B6B63;
-  --color-accent:        #B8432F;
-  --color-accent-hover:  #9A3626;
-  --color-success:       #2D6A4F;
-  --color-warning:       #C77F2B;
-  --color-border:        #D9D5CE;
-  --color-verdict-bg:    #F5F0E8;
+  /* Palette adopted from the Midnight Network brand hub:
+     https://midnight.network/brand-hub
+     - Midnight Black #0A0A0A
+     - White #FFFFFF
+     - Midnight Blue #0000FE
+     Redress sits on top of Midnight, so we use its palette family with a
+     lighter neutral base to keep long-form pages readable. */
+  --color-surface:       #FBFBFB;
+  --color-surface-alt:   #F1F1F3;
+  --color-ink:           #0A0A0A;
+  --color-ink-muted:     #5A5A62;
+  --color-accent:        #0000FE;
+  --color-accent-hover:  #0000CC;
+  --color-accent-2:      #4747FF;
+  --color-success:       #0A9F5F;
+  --color-warning:       #F04438;
+  --color-border:        #E4E4E7;
+  --color-verdict-bg:    #EEEEFF;
 
-  --font-display: 'Fraunces', serif;
-  --font-body:    'Inter', sans-serif;
-  --font-mono:    'IBM Plex Mono', monospace;
+  /* Reusable gradients (all blue-only, matching Midnight's identity) */
+  --grad-accent:        linear-gradient(135deg, #0000FE 0%, #4747FF 55%, #6D5EFF 100%);
+  --grad-accent-soft:   linear-gradient(135deg, rgba(0, 0, 254, 0.14), rgba(71, 71, 255, 0.20));
+  --grad-tech-stripe:   linear-gradient(90deg, #0000A6 0%, #0000FE 40%, #4747FF 100%);
+
+  --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-body:    'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-mono:    'IBM Plex Mono', ui-monospace, monospace;
 }
