@@ -36,12 +36,13 @@ Five routes, all wired through the SDK:
 
 Design system: warm palette (burnt sienna `#B8432F`, parchment `#F5F0E8`, forest green `#2D6A4F`); Fraunces + Inter + IBM Plex Mono; lucide-react icons stroke 1.5; no purple, no gradients, no glow effects. All colors resolve through CSS custom properties in `frontend/src/styles/tokens.css` (no raw Tailwind color classes in JSX).
 
-### Verdict Worker (`verdict-worker/` + `frontend/api/verdict.ts`)
+### Verdict Worker (shared engine in `frontend/verdict-engine/`, dev server in `verdict-worker/`)
 
+- The verdict engine (`handler.ts`, `models.ts`, `prompts.ts`) lives under `frontend/verdict-engine/` so it sits inside the directory Vercel deploys as its root — `frontend/api/verdict.ts` imports it in production, and `verdict-worker/src/dev-server.ts` (the local dev harness) imports it for development. (Previously the engine lived in `verdict-worker/src/`, outside the deployed root, which broke the Vercel serverless bundle with `FUNCTION_INVOCATION_FAILED`.)
 - **Gemini 3.6 Flash primary, Groq Llama 3.1 8B Instant fallback.** Both providers receive the same structured system prompt constraining output to a strict JSON schema.
 - **Per-claim-type context.** Fraud, refund, chargeback, KYC exception, and account appeal each get a claim-context paragraph appended to the user prompt.
 - **JSON validation.** Response is parsed with markdown-fence stripping, then validated (decision enum, confidence range, non-empty reasoning).
-- **Two runtime shapes from one handler.** `handleVerdictRequest` in `verdict-worker/src/handler.ts` is shared between `frontend/api/verdict.ts` (Vercel serverless) and `verdict-worker/src/dev-server.ts` (plain Node HTTP, CORS-enabled for `localhost:5173`).
+- **Two runtime shapes from one handler.** `handleVerdictRequest` in `frontend/verdict-engine/handler.ts` is shared between `frontend/api/verdict.ts` (Vercel serverless) and `verdict-worker/src/dev-server.ts` (plain Node HTTP, CORS-enabled for `localhost:5173`).
 - **Frontend URL switching.** `frontend/src/lib/verdict-client.ts` points at `http://localhost:3001/api/verdict` in dev, `/api/verdict` in production.
 
 ### Infrastructure

@@ -29,7 +29,7 @@ Three steps:
 | Compact contract | `contract/src/redress.compact` | Three circuits: `register_platform`, `submit_claim`, `post_verdict` |
 | SDK | `sdk/src/` | Chain interaction, nacl.box envelope crypto, DApp Connector wallet bridge |
 | Frontend | `frontend/src/` | React 19 / Vite 8 / Tailwind 4 UI with five routes |
-| Verdict worker | `verdict-worker/src/` and `frontend/api/verdict.ts` | Gemini + Groq AI adjudication (Vercel serverless in production) |
+| Verdict engine | `frontend/verdict-engine/` (shared) + `verdict-worker/src/dev-server.ts` (local dev server) | Gemini + Groq AI adjudication, exposed as the Vercel serverless function `frontend/api/verdict.ts` in production |
 
 ## 5. Privacy Model
 
@@ -136,8 +136,9 @@ Then rebuild the frontend and redeploy.
 
 ## 12. Live Demo
 
-<!-- Fill in with the actual Vercel URL after deploy -->
-`https://redress-app.vercel.app` (replace with your Vercel URL)
+**Live:** https://redress-app-two.vercel.app
+
+The contract is deployed on Midnight Preprod at address `3bc1d9206114424bf47b621dfc8f3c67ba481de4ccb90b8b912d22343bb3c68c` (set as `CONTRACT_ADDRESS` in `sdk/src/chain.ts`).
 
 ## 13. Wave 1 Scope and Roadmap
 

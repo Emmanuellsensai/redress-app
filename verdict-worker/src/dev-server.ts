@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { handleVerdictRequest } from './handler';
+import { handleVerdictRequest } from '../../frontend/verdict-engine/handler';
 
 const PORT = 3001;
 

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { handleVerdictRequest } from '../../verdict-worker/src/handler';
+import { handleVerdictRequest } from '../verdict-engine/handler';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {

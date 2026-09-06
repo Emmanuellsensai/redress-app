@@ -3,15 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "AI verdict engine for Redress claims (Gemini primary, Groq fallback)",
+  "description": "Local dev harness for the AI verdict engine (production runs as a Vercel serverless function at frontend/api/verdict.ts)",
   "license": "Apache-2.0",
   "scripts": {
     "dev": "npx tsx src/dev-server.ts"
   },
   "dependencies": {
-    "@redress/sdk": "*",
-    "@google/generative-ai": "^0.24.0",
-    "groq-sdk": "^0.9.0"
+    "@redress/sdk": "*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

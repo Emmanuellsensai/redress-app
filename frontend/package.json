@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@redress/sdk": "*",
+    "@google/generative-ai": "^0.24.0",
     "@midnight-ntwrk/dapp-connector-api": "^4.0.1",
     "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
     "@midnight-ntwrk/midnight-js-dapp-connector-proof-provider": "^4.1.1",
@@ -27,6 +28,7 @@
     "buffer": "^6.0.3",
     "events": "^3.3.0",
     "framer-motion": "^13.0.0",
+    "groq-sdk": "^0.9.0",
     "lucide-react": "^0.469.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
