@@ -36,7 +36,7 @@ export const NETWORK_ID = 'preprod';
 setNetworkId(NETWORK_ID);
 
 /** Set after first deploy to Preprod (populated via /deploy admin route). */
-export const CONTRACT_ADDRESS = '';
+export const CONTRACT_ADDRESS = '3bc1d9206114424bf47b621dfc8f3c67ba481de4ccb90b8b912d22343bb3c68c';
 
 const INDEXER_URI = 'https://indexer.preprod.midnight.network/api/v4/graphql';
 const INDEXER_WS_URI = 'wss://indexer.preprod.midnight.network/api/v4/graphql/ws';
