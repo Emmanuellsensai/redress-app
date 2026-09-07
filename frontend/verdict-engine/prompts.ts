@@ -1,4 +1,18 @@
-import type { ClaimType } from '@redress/sdk';
+/**
+ * Prompt templates for the AI verdict engine.
+ *
+ * The `ClaimType` type is intentionally inlined here (not imported from
+ * `@redress/sdk`) so this file has zero workspace dependencies. That lets
+ * Vercel's serverless-function bundler resolve it cleanly without needing
+ * to traverse the npm workspace — a common cause of
+ * `FUNCTION_INVOCATION_FAILED` at boot.
+ */
+export type ClaimType =
+  | 'fraud'
+  | 'refund'
+  | 'chargeback'
+  | 'kyc_exception'
+  | 'account_appeal';
 
 const SYSTEM_PROMPT = `You are a claims adjudicator for a financial platform. You evaluate evidence submitted by users and issue structured verdicts.
 

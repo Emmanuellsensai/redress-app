@@ -1,5 +1,6 @@
-import type { ClaimType } from '@redress/sdk';
-import { buildPrompt } from './prompts';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
+import { buildPrompt, type ClaimType } from './prompts';
 
 type RawVerdict = {
   decision: 'approved' | 'denied' | 'escalate';
@@ -30,7 +31,6 @@ export const callGemini = async (
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
-  const { GoogleGenerativeAI } = await import('@google/generative-ai');
   const genAI = new GoogleGenerativeAI(apiKey);
   const { system, user } = buildPrompt(evidence, claimType);
 
@@ -62,7 +62,6 @@ export const callGroq = async (
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error('GROQ_API_KEY not set');
 
-  const Groq = (await import('groq-sdk')).default;
   const groq = new Groq({ apiKey });
   const { system, user } = buildPrompt(evidence, claimType);
 
