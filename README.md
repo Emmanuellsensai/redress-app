@@ -16,11 +16,12 @@ Every consumer app has a "contact support" or "dispute this transaction" button.
 
 ## 3. How Redress Solves It
 
-Three steps:
+Four steps, reporter-driven:
 
-1. **Encrypt & Submit.** The claimant encrypts evidence to the platform's curve25519 public key in-browser using a single-use ephemeral keypair. The chain stores only a hash commitment and the encrypted envelope; the plaintext never leaves the submitter's browser unencrypted.
-2. **AI Adjudication.** The platform decrypts the evidence off-chain and triggers an AI verdict worker (Gemini primary, Groq fallback). The verdict reasoning stays private; only its hash goes on-chain.
-3. **Verify Anywhere.** A regulator, auditor, or the claimant themselves can re-hash the plaintext evidence and verdict locally and compare against the on-chain commitments. Green check or red X. No trust required.
+1. **Encrypt & Submit.** The reporter encrypts evidence to the platform's curve25519 public key in-browser using a single-use ephemeral keypair. The chain stores only a hash commitment and the encrypted envelope; the plaintext never leaves the reporter's browser unencrypted.
+2. **AI Adjudication.** The same page immediately calls the AI verdict engine (Gemini primary, Groq fallback) with the plaintext the reporter just typed. A verdict (approved, denied, or escalate) is returned with reasoning.
+3. **Reporter Decides.** The reporter approves the AI verdict, rejects it, or escalates to a human. Whichever they pick becomes the final verdict, and its hash is committed on-chain. The reporter downloads a JSON receipt containing the evidence plaintext, verdict, both hashes, and both transaction ids.
+4. **Verify Anywhere.** A regulator, auditor, or the reporter themselves can re-hash the plaintext evidence and verdict locally and compare against the on-chain commitments. Green check or red X. No trust required.
 
 ## 4. Architecture
 
@@ -54,9 +55,9 @@ Envelope encryption uses a single-use ephemeral curve25519 keypair per submissio
 - **TypeScript 6**, **React 19**, **Vite 8**, **Tailwind CSS 4**
 - **tweetnacl** (curve25519 nacl.box)
 - **Framer Motion** for entrance animations
-- **Gemini 3.6 Flash** primary, **Groq Llama 3.1 8B Instant** fallback
+- **Gemini 2.5 Flash** primary, **Groq Llama 3.3 70B** fallback (with model-ID fallback chain so deprecations self-heal)
 - **Vercel** (frontend hosting + serverless `/api/verdict`)
-- **1am wallet** (bypasses Lace tDUST congestion on Preprod)
+- Any Midnight connector wallet (1am, Lace); wallet detection polls for late-loading extensions and enumerates every wallet under `window.midnight`
 
 ## 7. Prerequisites
 

@@ -1,86 +1,80 @@
-# Demo Video Script. Redress (under 5 minutes)
+# Demo Video Script: Redress (under 5 minutes)
 
-Target length: 4:30. Record in OBS at 1080p 30fps. Edit in CapCut: speed up transaction-confirmation waits to 4×, keep narration at 1×. Add lower-third text with each section title.
+Target length: 4:00. Record in OBS at 1080p 30fps. Edit in CapCut: speed up transaction-confirmation waits to 4x, keep narration at 1x. Add lower-third text with each section title.
 
 ---
 
-## 0:00. 0:30 · Intro
+## 0:00 to 0:30 · Intro
 
-**On screen:** the Landing page (`/`) with the hero visible.
+**On screen:** the Landing page (`/`) with the hero visible. Panel of AI-judge avatars floating around the headline.
 
-> "This is Redress. Privacy-preserving claims infrastructure built on Midnight. Every consumer app has a dispute button. Today, users email screenshots of bank statements to strangers. Redress changes that: evidence stays encrypted, an AI adjudicates, and regulators can audit without seeing your private data."
+> "This is Redress. Privacy-preserving claims infrastructure built on Midnight. Every consumer app has a dispute button. Today, users email screenshots of bank statements to strangers, companies custody sensitive evidence forever, and regulators cannot audit without a full data dump. Redress fixes that. Evidence stays encrypted, an AI panel adjudicates, and the reporter decides what happens next."
 
-## 0:30. 1:15 · Platform Setup
+## 0:30 to 1:00 · Platform Setup
 
 **On screen:** `/dashboard`.
 
-1. Connect 1am wallet. Show the connected-address chip.
+1. Connect 1am wallet. Show the connected chip.
 2. Click **Generate Keypair**.
 3. Highlight the warning: *"Your secret key is stored in this browser only."*
-4. Click **Register On-Chain**.
-5. Cut to the confirmation state with the on-chain public key displayed.
+4. Click **Register On-Chain**. Speed through the transaction wait.
+5. Cut to "You are the registered platform" confirmation.
 
-> "The platform just published its public key on-chain. Now claimants can encrypt evidence to it. And only the platform's secret key, which never left the browser, can decrypt."
+> "The platform publishes its curve25519 public key on-chain. Now claimants can encrypt evidence to it, and only the platform's secret key, which never left the browser, can decrypt."
 
-## 1:15. 2:15 · Submit a Claim
+## 1:00 to 2:30 · Reporter files a claim end-to-end
 
-**On screen:** `/submit` in a fresh tab.
+**On screen:** `/submit` in a fresh tab (or incognito to sell the "different party" story).
 
 1. Connect wallet.
 2. Select **Fraud** in the dropdown.
 3. Type the evidence:
-   > "On August 20, 2026, an unauthorized charge of $49.99 appeared on my account from merchant ID 88213. I did not authorize this transaction."
+   > "On 2026-09-05 an unauthorized $79.99 charge from merchant 44821 appeared on my card. I did not authorize this transaction."
 4. Point at the privacy notice above the form.
-5. Click **Submit Claim**.
-6. Speed through the transaction wait.
-7. Cut to the success card showing the transaction ID and the new evidence hash.
+5. Click **Submit for AI verdict**. Sign the transaction in 1am.
+6. Speed through the transaction wait, land on "Asking the AI judge..."
+7. Cut to the **AI verdict card**: APPROVED, 90% confidence, reasoning visible.
+8. Explain the three options briefly, then click **Approve**.
+9. Sign the second transaction. Speed through.
+10. Cut to the **Done card** with both hashes.
+11. Click **Download claim receipt**. Show the JSON file appearing in the downloads bar.
 
-> "The chain now stores the encrypted envelope and a one-way hash of my evidence. The plaintext never touched the ledger. The zero-knowledge proof binds the hash to a real preimage that only I knew when I signed."
+> "In one flow: the evidence was encrypted, submitted, adjudicated by the AI, and committed on-chain, with the reporter deciding whether to accept, reject, or escalate. Only the hashes hit the ledger. The reporter walks away with a receipt they can prove months later, without the platform's cooperation."
 
-## 2:15. 3:15 · AI Verdict
-
-**On screen:** back to `/dashboard`.
-
-1. Show the claim appearing in the inbox.
-2. Click **Decrypt**. The plaintext evidence appears.
-3. Select claim type (fraud).
-4. Click **Get AI Verdict**.
-5. Cut to the verdict card: decision (`APPROVED`), confidence, reasoning.
-6. Click **Post Verdict On-Chain**.
-7. Speed through the transaction wait.
-8. Cut to the verdict-hash confirmation.
-
-> "The AI evaluated the evidence off-chain. Only the verdict hash goes on-chain. The reasoning stays private. The platform sees it, the claimant sees it, nobody else does."
-
-## 3:15. 4:00 · Regulator Verification
+## 2:30 to 3:15 · Regulator verifies without wallet
 
 **On screen:** `/verify`. No wallet required.
 
-1. Show the on-chain evidence and verdict hashes at the top.
-2. Paste the original evidence plaintext into the first textarea.
-3. Paste the verdict JSON blob into the second textarea.
-4. Click **Verify**.
-5. Cut to both green checkmarks confirming the hashes match.
+1. Show the on-chain claim count and both latest hashes at the top.
+2. Open the downloaded receipt file. Copy `evidencePlaintext`.
+3. Paste into Evidence plaintext box.
+4. From the receipt, copy the inner `verdictJson` object (one line).
+5. Paste into Verdict plaintext box.
+6. Click **Verify hashes**.
+7. Cut to both green matches.
 
-> "A regulator, given the plaintext out-of-band, can verify that the on-chain commitments match. Without ever holding the private data on-chain, and without connecting a wallet. This entire check runs in the browser."
+> "A regulator, given the receipt out-of-band, verifies both hashes match the on-chain commitments. Nothing sensitive was ever published. The check runs entirely in the browser. No wallet, no trust in the platform, no data dump."
 
-## 4:00. 4:30 · Architecture Recap + Close
+## 3:15 to 3:45 · Architecture Recap
 
-**On screen:** the architecture diagram from the slide deck.
+**On screen:** the architecture diagram from the slide deck or the landing page's Built-on-Midnight section.
 
-> "Under the hood: a Compact contract with three circuits using `persistentHash` for in-circuit commitments. An SDK with nacl.box envelope encryption using single-use ephemeral keypairs, so sender identity is cryptographically unrecoverable. And a verdict worker with Gemini as primary and Groq as fallback."
->
-> "Redress: private claims, verifiable verdicts, built on Midnight. Wave 1 of the Midnight Buildathon."
->
-> "github.com/Emmanuellsensai/redress-app"
+> "Under the hood: a Compact contract with three circuits, using persistentHash to bind private witnesses to public commitments. nacl.box envelope encryption with single-use ephemeral keypairs, so sender identity is cryptographically unrecoverable. A serverless verdict engine with Gemini 2.5 Flash primary and Groq Llama fallback. Nothing esoteric, all documented, all auditable."
 
-**End card:** `redress-app.vercel.app` + `@Emmanuellsensai`
+## 3:45 to 4:00 · Close
+
+**On screen:** end card.
+
+> "Redress. Private claims. Verifiable verdicts. Built on Midnight. Wave 1 of the Midnight Buildathon."
+
+> "github.com/Emmanuellsensai/redress-app. redress-app-two.vercel.app."
 
 ---
 
 ## Recording tips
 
-- Have both wallets funded from tDUST faucet before recording. The demo dies if a tx never confirms.
-- Two browser windows side-by-side (claimant + platform) sells the "two parties" story instantly.
-- Do the whole flow once end-to-end as rehearsal *before* hitting record: mistakes on camera cost more than a rehearsal.
-- Use a 30-second silence at the end of each transaction as your cut point; CapCut can trim + speed those without cutting narration.
+- Fund the 1am wallet from the Preprod faucet before recording. Two claims worth of DUST minimum.
+- Two browser windows side-by-side (claimant left, regulator right) sells the multi-party story instantly.
+- Do the full flow once as rehearsal before hitting record. Mistakes on camera cost more than a rehearsal.
+- Use the 30-second silence at the end of each transaction as your cut point. CapCut can trim and speed those without cutting narration.
+- Show the receipt JSON on screen for 2 to 3 seconds. It reinforces that the reporter owns the proof.

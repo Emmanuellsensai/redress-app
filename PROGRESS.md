@@ -27,19 +27,20 @@ Everything in this repository was built from scratch during Wave 1 (August 27 â€
 Five routes, all wired through the SDK:
 
 - **`/` Landing**: product pitch, three-step how-it-works, Midnight explainer, Framer Motion entrance animations.
-- **`/submit` Submit Claim**: reads platform key from chain, encrypts evidence in-browser, calls `submit_claim(envelope, paddedPlaintext)`, displays tx id and the new `latest_evidence_hash`.
-- **`/dashboard` Dashboard**: two modes:
+- **`/submit` Submit Claim (reporter-centric flow)**: single-page journey. Reads platform key from chain, encrypts evidence in-browser, calls `submit_claim(envelope, paddedPlaintext)`, immediately calls the AI verdict engine with the plaintext, shows the verdict card with three buttons (Approve, Reject, Escalate), and posts the final verdict via `post_verdict`. Reporter can download a JSON receipt (evidence plaintext, verdict blob, both hashes, both tx ids, AI's original suggestion, issuance timestamp). State is persisted in sessionStorage so a refresh does not wipe the receipt data.
+- **`/dashboard` Dashboard (passive audit view)**: two modes:
   - *Not registered:* generate keypair, warn about `localStorage`, call `register_platform`.
-  - *Registered:* verify browser-stored SK derives to the on-chain PK; decrypt each envelope; per-claim `claimType` selector; call `fetchVerdict` (real AI, with spinner + retry on error); post the padded verdict JSON via `post_verdict`.
-- **`/verify` Verify**: no wallet; SHA-256 of padded plaintext vs on-chain hash; caveat about `persistentHash` domain separator surfaced in the UI.
+  - *Registered:* read-only inbox of every sealed envelope. Ops can decrypt any envelope for auditing but the platform posts no transactions of its own; reporters drive adjudication and commit verdicts themselves.
+- **`/verify` Verify**: no wallet; SHA-256 of padded plaintext vs on-chain hash. Verified end-to-end: Compact's `persistentHash` matches raw SHA-256 for our `Bytes<256>` inputs, so no domain-separator adjustment is needed.
 - **`/deploy` Deploy**: admin route calling `deployRedressContract`; reminds admin to update `CONTRACT_ADDRESS` in `sdk/src/chain.ts`.
 
-Design system: warm palette (burnt sienna `#B8432F`, parchment `#F5F0E8`, forest green `#2D6A4F`); Fraunces + Inter + IBM Plex Mono; lucide-react icons stroke 1.5; no purple, no gradients, no glow effects. All colors resolve through CSS custom properties in `frontend/src/styles/tokens.css` (no raw Tailwind color classes in JSX).
+Design system: Midnight Network brand palette (Midnight Black `#0A0A0A`, White `#FFFFFF`, Midnight Blue `#0000FE`); Plus Jakarta Sans (500 to 800) plus IBM Plex Mono for hashes; lucide-react icons stroke 1.5 to 1.75; custom Redress logo (shield seal with R monogram and verdict-check corner accent) in the nav; Midnight logo in the Live-on-Midnight pill and tech stripe. Liquid-glass sticky nav and footer, continuous marquee tech stripe, scroll-linked hero parallax with orbiting AI-judge avatars, mouse-follow tilt cards with projected shadow. All colors resolve through CSS custom properties in `frontend/src/styles/tokens.css`.
 
 ### Verdict Worker (shared engine in `frontend/verdict-engine/`, dev server in `verdict-worker/`)
 
 - The verdict engine (`handler.ts`, `models.ts`, `prompts.ts`) lives under `frontend/verdict-engine/` so it sits inside the directory Vercel deploys as its root â€” `frontend/api/verdict.ts` imports it in production, and `verdict-worker/src/dev-server.ts` (the local dev harness) imports it for development. (Previously the engine lived in `verdict-worker/src/`, outside the deployed root, which broke the Vercel serverless bundle with `FUNCTION_INVOCATION_FAILED`.)
-- **Gemini 3.6 Flash primary, Groq Llama 3.1 8B Instant fallback.** Both providers receive the same structured system prompt constraining output to a strict JSON schema.
+- **Gemini 2.5 Flash primary, Groq Llama 3.3 70B fallback.** Both providers walk a fallback list of model IDs so a deprecation on either side self-heals rather than 500s. Every failed attempt is captured in the error surface for debugging.
+- **Inlined into `frontend/api/verdict.ts` as a single self-contained file.** Earlier revisions split the engine across `frontend/verdict-engine/*.ts`, which broke Vercel's cold-start bundler tracing and produced `FUNCTION_INVOCATION_FAILED`. Collapsing everything into one file with static top-of-file imports eliminated that failure class permanently.
 - **Per-claim-type context.** Fraud, refund, chargeback, KYC exception, and account appeal each get a claim-context paragraph appended to the user prompt.
 - **JSON validation.** Response is parsed with markdown-fence stripping, then validated (decision enum, confidence range, non-empty reasoning).
 - **Two runtime shapes from one handler.** `handleVerdictRequest` in `frontend/verdict-engine/handler.ts` is shared between `frontend/api/verdict.ts` (Vercel serverless) and `verdict-worker/src/dev-server.ts` (plain Node HTTP, CORS-enabled for `localhost:5173`).
