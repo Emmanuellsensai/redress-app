@@ -53,7 +53,20 @@ export default function SubmitClaim() {
   const [accountId, setAccountId] = useState<string | null>(null);
   const [claimType, setClaimType] = useState<ClaimType>('fraud');
   const [evidence, setEvidence] = useState('');
-  const [stage, setStage] = useState<Stage>({ kind: 'idle' });
+  const [stage, setStage] = useState<Stage>(() => {
+    // Restore Done state from sessionStorage so a refresh doesn't wipe
+    // the reporter's verdict + hashes right after they finish the flow.
+    try {
+      const raw = sessionStorage.getItem('redress_last_result');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.kind === 'done') return parsed as Stage;
+      }
+    } catch {
+      /* ignore */
+    }
+    return { kind: 'idle' };
+  });
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -65,6 +78,12 @@ export default function SubmitClaim() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (stage.kind === 'done') {
+      sessionStorage.setItem('redress_last_result', JSON.stringify(stage));
+    }
+  }, [stage]);
 
   const submitAndAdjudicate = async () => {
     if (!api || !accountId || !state?.platformPublicKey) return;
@@ -160,6 +179,7 @@ export default function SubmitClaim() {
     setClaimType('fraud');
     setStage({ kind: 'idle' });
     setError(null);
+    sessionStorage.removeItem('redress_last_result');
   };
 
   const submitBusy = stage.kind === 'submitting' || stage.kind === 'adjudicating';
@@ -512,9 +532,44 @@ function DoneCard({
         <div className="hash">{verdictHash}</div>
       </div>
 
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+        <CopyButton
+          label="Copy verdict JSON (for /verify)"
+          value={JSON.stringify({
+            d: finalVerdict.decision,
+            c: finalVerdict.confidence,
+            r: finalVerdict.reasoning,
+            t: finalVerdict.claimType,
+            ts: finalVerdict.timestamp,
+          })}
+        />
+        <CopyButton label="Copy evidence hash" value={evidenceHash} />
+        <CopyButton label="Copy verdict hash" value={verdictHash} />
+      </div>
+
       <button className="btn btn-ghost" onClick={onReset}>
         File another claim
       </button>
     </div>
+  );
+}
+
+function CopyButton({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      className="btn btn-ghost"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(value);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          /* clipboard blocked */
+        }
+      }}
+    >
+      {copied ? '✓ Copied' : label}
+    </button>
   );
 }
