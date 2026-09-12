@@ -42,9 +42,9 @@ type Stage =
   | { kind: 'idle' }
   | { kind: 'submitting' }
   | { kind: 'adjudicating' }
-  | { kind: 'verdict'; verdict: Verdict; submissionTxId: string; evidenceHash: string }
-  | { kind: 'posting'; verdict: Verdict; submissionTxId: string; evidenceHash: string; finalDecision: 'approved' | 'denied' | 'escalate' }
-  | { kind: 'done'; verdict: Verdict; finalVerdict: Verdict; submissionTxId: string; verdictTxId: string; evidenceHash: string; verdictHash: string };
+  | { kind: 'verdict'; verdict: Verdict; submissionTxId: string; evidenceHash: string; evidenceText: string }
+  | { kind: 'posting'; verdict: Verdict; submissionTxId: string; evidenceHash: string; evidenceText: string; finalDecision: 'approved' | 'denied' | 'escalate' }
+  | { kind: 'done'; verdict: Verdict; finalVerdict: Verdict; submissionTxId: string; verdictTxId: string; evidenceHash: string; verdictHash: string; evidenceText: string };
 
 export default function SubmitClaim() {
   const [state, setState] = useState<PublicState | null>(null);
@@ -110,6 +110,7 @@ export default function SubmitClaim() {
         verdict,
         submissionTxId: outcome.public.txId,
         evidenceHash,
+        evidenceText: evidence,
       });
     } catch (err) {
       setError(errorText(err));
@@ -120,9 +121,9 @@ export default function SubmitClaim() {
   const decide = async (finalDecision: 'approved' | 'denied' | 'escalate') => {
     if (stage.kind !== 'verdict') return;
     if (!api || !accountId) return;
-    const { verdict, submissionTxId, evidenceHash } = stage;
+    const { verdict, submissionTxId, evidenceHash, evidenceText } = stage;
     setError(null);
-    setStage({ kind: 'posting', verdict, submissionTxId, evidenceHash, finalDecision });
+    setStage({ kind: 'posting', verdict, submissionTxId, evidenceHash, evidenceText, finalDecision });
     try {
       // Reporter has authority to override the AI here. If they accept,
       // the on-chain verdict is the AI's exact judgement. If they reject
@@ -162,6 +163,7 @@ export default function SubmitClaim() {
         verdictTxId: outcome.public.txId,
         evidenceHash,
         verdictHash: updated ? toHex(updated.latestVerdictHash) : '(unknown)',
+        evidenceText,
       });
     } catch (err) {
       setError(errorText(err));
@@ -170,6 +172,7 @@ export default function SubmitClaim() {
         verdict: stage.verdict,
         submissionTxId: stage.submissionTxId,
         evidenceHash: stage.evidenceHash,
+        evidenceText: stage.evidenceText,
       });
     }
   };
@@ -300,6 +303,7 @@ export default function SubmitClaim() {
               verdictTxId={stage.verdictTxId}
               evidenceHash={stage.evidenceHash}
               verdictHash={stage.verdictHash}
+              evidenceText={stage.evidenceText}
               onReset={reset}
             />
           )}
@@ -454,6 +458,7 @@ function DoneCard({
   verdictTxId,
   evidenceHash,
   verdictHash,
+  evidenceText,
   onReset,
 }: {
   verdict: Verdict;
@@ -462,6 +467,7 @@ function DoneCard({
   verdictTxId: string;
   evidenceHash: string;
   verdictHash: string;
+  evidenceText: string;
   onReset: () => void;
 }) {
   const overridden = finalVerdict.decision !== verdict.decision;
@@ -533,6 +539,26 @@ function DoneCard({
       </div>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+        <DownloadReceiptButton
+          receipt={{
+            evidencePlaintext: evidenceText,
+            verdictJson: {
+              d: finalVerdict.decision,
+              c: finalVerdict.confidence,
+              r: finalVerdict.reasoning,
+              t: finalVerdict.claimType,
+              ts: finalVerdict.timestamp,
+            },
+            evidenceHash,
+            verdictHash,
+            submissionTxId,
+            verdictTxId,
+            aiSuggestedDecision: verdict.decision,
+            aiSuggestedConfidence: verdict.confidence,
+            aiSuggestedReasoning: verdict.reasoning,
+            issuedAt: new Date().toISOString(),
+          }}
+        />
         <CopyButton
           label="Copy verdict JSON (for /verify)"
           value={JSON.stringify({
@@ -551,6 +577,45 @@ function DoneCard({
         File another claim
       </button>
     </div>
+  );
+}
+
+type Receipt = {
+  evidencePlaintext: string;
+  verdictJson: { d: string; c: number; r: string; t: string; ts: number };
+  evidenceHash: string;
+  verdictHash: string;
+  submissionTxId: string;
+  verdictTxId: string;
+  aiSuggestedDecision: string;
+  aiSuggestedConfidence: number;
+  aiSuggestedReasoning: string;
+  issuedAt: string;
+};
+
+function DownloadReceiptButton({ receipt }: { receipt: Receipt }) {
+  const [downloaded, setDownloaded] = useState(false);
+  return (
+    <button
+      className="btn btn-primary"
+      onClick={() => {
+        const blob = new Blob([JSON.stringify(receipt, null, 2)], {
+          type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `redress-receipt-${receipt.evidenceHash.slice(0, 8)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setDownloaded(true);
+        setTimeout(() => setDownloaded(false), 1500);
+      }}
+    >
+      {downloaded ? '✓ Saved' : 'Download claim receipt'}
+    </button>
   );
 }
 
