@@ -102,7 +102,7 @@ export default function SubmitClaim() {
       const evidenceHash = updated ? toHex(updated.latestEvidenceHash) : '(unknown)';
 
       // Straight into AI adjudication with the plaintext the reporter
-      // just typed — no need to decrypt anything.
+      // just typed - no need to decrypt anything.
       setStage({ kind: 'adjudicating' });
       const verdict = await fetchVerdict(evidence, claimType);
       setStage({
@@ -128,7 +128,7 @@ export default function SubmitClaim() {
       // Reporter has authority to override the AI here. If they accept,
       // the on-chain verdict is the AI's exact judgement. If they reject
       // or escalate, we override the `decision` field and note that this
-      // is the reporter's decision (confidence 1.0 by definition — the
+      // is the reporter's decision (confidence 1.0 by definition - the
       // reporter is expressing their own certainty, not the AI's).
       const finalVerdict: Verdict =
         finalDecision === 'approved'
@@ -233,7 +233,7 @@ export default function SubmitClaim() {
         </div>
       ) : (
         <>
-          {/* STEP 1 — the form (only visible while idle or actively submitting) */}
+          {/* STEP 1 - the form (only visible while idle or actively submitting) */}
           {(stage.kind === 'idle' || stage.kind === 'submitting' || stage.kind === 'adjudicating') && (
             <div className="card">
               <div className="field">
@@ -262,7 +262,7 @@ export default function SubmitClaim() {
                   maxLength={MAX_EVIDENCE_CHARS}
                   onChange={(e) => setEvidence(e.target.value)}
                   disabled={submitBusy}
-                  placeholder="Describe the incident. Dates, amounts, identifiers — the platform will read this after decrypting."
+                  placeholder="Describe the incident. Dates, amounts, identifiers - the platform will read this after decrypting."
                 />
               </div>
 
@@ -283,7 +283,7 @@ export default function SubmitClaim() {
             </div>
           )}
 
-          {/* STEP 2 — the AI verdict (visible while verdict is pending decision) */}
+          {/* STEP 2 - the AI verdict (visible while verdict is pending decision) */}
           {(stage.kind === 'verdict' || stage.kind === 'posting') && (
             <VerdictCard
               verdict={stage.verdict}
@@ -294,7 +294,7 @@ export default function SubmitClaim() {
             />
           )}
 
-          {/* STEP 3 — done */}
+          {/* STEP 3 - done */}
           {stage.kind === 'done' && (
             <DoneCard
               verdict={stage.verdict}

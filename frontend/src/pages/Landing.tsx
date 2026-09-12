@@ -23,7 +23,7 @@ const fadeUp = {
   transition: { duration: 0.6, ease: 'easeOut' as const },
 };
 
-/* Midnight-family gradients for the AI-judge avatars — variations of the
+/* Midnight-family gradients for the AI-judge avatars - variations of the
    Midnight brand blue with subtle indigo shifts so each bubble reads as
    distinct while staying inside the ecosystem palette. */
 const g1 = 'linear-gradient(135deg, #0000FE 0%, #4747FF 100%)';
@@ -78,7 +78,7 @@ export default function Landing() {
       >
         <AmbientRings rot={ringsRot} scale={ringsScale} />
 
-        {/* Agent avatars — three orbit clockwise, three counter, each on its
+        {/* Agent avatars - three orbit clockwise, three counter, each on its
             own vertical rate so the hero feels like a rotating scene. */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2 }}>
           <AgentBubble

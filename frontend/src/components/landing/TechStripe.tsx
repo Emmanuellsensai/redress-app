@@ -8,7 +8,7 @@ import { MidnightLogo } from '../ui/MidnightLogo';
  * flex row and animate `translateX(0) → translateX(-50%)`. Because the
  * second copy is identical, the moment the first copy has scrolled its
  * full width, the second copy sits in the exact position the first copy
- * started in — so the loop never has a visible seam.
+ * started in - so the loop never has a visible seam.
  *
  * Pauses on hover so a viewer can read the stack.
  */

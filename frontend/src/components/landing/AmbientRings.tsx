@@ -3,7 +3,7 @@ import { motion, type MotionValue } from 'framer-motion';
 /**
  * Centered concentric ring backdrop. Takes MotionValues from the parent's
  * `useScroll` so the outer rotation and scale respond frame-perfectly to
- * scroll progress inside the hero — no re-render, no jank.
+ * scroll progress inside the hero - no re-render, no jank.
  */
 export function AmbientRings({
   rot,

@@ -4,7 +4,7 @@ import { motion, type MotionValue } from 'framer-motion';
  * "AI judge" bubble that floats on the hero arc. Renders a bot avatar from
  * DiceBear, a name/role label, and a pulsing live ring. Takes MotionValues
  * from the parent's `useScroll` for smooth parallax drift as the user
- * scrolls — no re-render.
+ * scrolls - no re-render.
  */
 export function AgentBubble({
   seed,

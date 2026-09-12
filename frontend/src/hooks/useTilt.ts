@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
  *
  * When the card tilts, the shadow projects to the OPPOSITE side (a card
  * tilting toward the top-right casts its shadow to the bottom-left). This
- * sells the depth in a way a static shadow never does — the card actually
+ * sells the depth in a way a static shadow never does - the card actually
  * looks like it's lifting off the page toward the cursor.
  *
  * Respects `prefers-reduced-motion`: no tilt, no shadow tracking.

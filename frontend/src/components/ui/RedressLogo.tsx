@@ -1,5 +1,5 @@
 /**
- * Redress brand mark v2 — fuses the two identities Emmanuel has for
+ * Redress brand mark v2 - fuses the two identities Emmanuel has for
  * Redress: the blue circular target/seal from the AKINDO submission, and
  * the shield-with-verdict-check from Redress Labs. The result is a
  * layered, gently 3D shield rendered entirely in SVG:
@@ -10,7 +10,7 @@
  *  - Small verdict checkmark badge in the upper right corner
  *
  * The 3D feel comes from a linear gradient + top-inner highlight arc +
- * SVG drop shadow filter. Nothing rasterized — scales cleanly to any
+ * SVG drop shadow filter. Nothing rasterized - scales cleanly to any
  * size, from favicon to hero.
  */
 export function RedressLogo({
@@ -52,7 +52,7 @@ export function RedressLogo({
         </filter>
       </defs>
 
-      {/* Outer seal ring — target motif from the AKINDO mark */}
+      {/* Outer seal ring - target motif from the AKINDO mark */}
       <circle cx="32" cy="32" r="30" fill="none" stroke="#4747FF" strokeWidth="1.5" opacity="0.35" />
       <circle cx="32" cy="32" r="27" fill="none" stroke="#4747FF" strokeWidth="0.8" opacity="0.6" strokeDasharray="2 3" />
 
@@ -63,7 +63,7 @@ export function RedressLogo({
         filter={`url(#${shadowId})`}
       />
 
-      {/* Top glossy highlight — read as 3D dome */}
+      {/* Top glossy highlight - read as 3D dome */}
       <path
         d="M32 8 L52 16 L52 24 Q42 30 32 30 Q22 30 12 24 L12 16 Z"
         fill={`url(#${highlightId})`}
@@ -76,7 +76,7 @@ export function RedressLogo({
         <path d="M31 34 L40 44" />
       </g>
 
-      {/* Verdict badge (cream ring + blue check) — the "shield with checkmark"
+      {/* Verdict badge (cream ring + blue check) - the "shield with checkmark"
           from the Redress Labs mark, refactored into a corner accent */}
       <g transform="translate(46 14)">
         <circle cx="0" cy="0" r="7" fill="#FFFFFF" />
@@ -94,7 +94,7 @@ export function RedressLogo({
   );
 }
 
-/** Mono-color variant — no gradients or shadows, one currentColor line
+/** Mono-color variant - no gradients or shadows, one currentColor line
  *  drawing. For nav bars and any place a filled mark would be too heavy. */
 function RedressMono({ size = 26, className }: { size?: number; className?: string }) {
   return (

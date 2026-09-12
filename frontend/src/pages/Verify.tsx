@@ -62,7 +62,7 @@ export default function Verify() {
     <main className="container" style={{ padding: '48px 0', maxWidth: 720 }}>
       <h1 style={{ fontSize: 32, marginBottom: 12 }}>Verify</h1>
       <p style={{ color: 'var(--color-ink-muted)', marginBottom: 20 }}>
-        Regulator / auditor view. Paste the plaintext evidence and verdict — this page re-hashes
+        Regulator / auditor view. Paste the plaintext evidence and verdict - this page re-hashes
         them in your browser and compares to the on-chain commitments. No wallet needed.
       </p>
 

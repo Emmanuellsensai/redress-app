@@ -15,7 +15,7 @@ type Props = {
  * wallet) inject a *namespace* at `window.midnight`: a map whose values are
  * DApp Connector entries shaped `{ rdns, name, icon, apiVersion,
  * connect(networkId) }` (the InitialAPI type). There is no
- * `window.midnight.mn1am` / `mnLace` property and no `enable()` method —
+ * `window.midnight.mn1am` / `mnLace` property and no `enable()` method -
  * code written against that imagined shape never detects a real wallet.
  * Discovery must enumerate `Object.values(window.midnight)` and offer every
  * entry with a working `connect`, exactly as the DApp Connector spec and the
@@ -41,7 +41,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /**
  * Preference rank for ordering the detected list:
  * 0 = 1am first (sponsors tDUST out of the box, so proving Just Works on
- *     Preprod — and it is the wallet used for deploys);
+ *     Preprod - and it is the wallet used for deploys);
  * 1 = any other non-Lace connector wallet (same connector-compliance
  *     guarantee, and avoids the locked-Lace-blocks-everything bug);
  * 2 = Lace, shown only when nothing else is injected alongside it.
@@ -294,7 +294,7 @@ export default function WalletConnect({ onConnect, onDisconnect }: Props) {
             Still stuck? Run <span className="mono">Object.keys(window.midnight)</span> in the
             browser console: if it lists connector entries (with <span className="mono">rdns</span>,{' '}
             <span className="mono">name</span>, <span className="mono">connect</span>) the wallet
-            did inject and the app should detect it — reload to re-scan. An empty object means the
+            did inject and the app should detect it - reload to re-scan. An empty object means the
             extension is not injecting on this origin; try <span className="mono">localhost:5173</span>,
             the most reliably supported origin.
           </div>

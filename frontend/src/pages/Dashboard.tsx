@@ -36,7 +36,7 @@ const SK_STORAGE_KEY = 'redress_platform_sk';
  *   - Inbox: every sealed envelope on-chain, plus counts of claims and
  *     verdicts. Ops can decrypt any envelope locally to inspect the
  *     underlying evidence for auditing, but they don't need to post any
- *     transactions — the reporters do that.
+ *     transactions - the reporters do that.
  */
 export default function Dashboard() {
   const [state, setState] = useState<PublicState | null>(null);

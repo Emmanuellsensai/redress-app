@@ -9,7 +9,7 @@ import { MidnightLogo } from '../ui/MidnightLogo';
  * The glass is composed from three layered elements:
  *   1. a base linear gradient (semi-opaque, tinted with the brand blue)
  *   2. a strong backdrop-filter blur so anything scrolled behind melts
- *   3. a hairline highlight at the top edge — the glass "cap"
+ *   3. a hairline highlight at the top edge - the glass "cap"
  * Plus a soft top-inset shadow to sell the depth.
  */
 export function Footer() {
@@ -32,7 +32,7 @@ export function Footer() {
         boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 -10px 30px -20px rgba(0, 0, 254, 0.18)',
       }}
     >
-      {/* Glass top edge highlight — a thin bright line that reads as the rim
+      {/* Glass top edge highlight - a thin bright line that reads as the rim
           of a piece of frosted glass */}
       <span
         aria-hidden
