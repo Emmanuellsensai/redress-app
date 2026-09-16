@@ -137,7 +137,9 @@ Then rebuild the frontend and redeploy.
 
 ## 12. Live Demo
 
-**Live:** https://redress-app-two.vercel.app
+- **Live app:** https://redress-app-two.vercel.app
+- **Demo video:** _link goes here once uploaded (YouTube or Loom)_
+- **Pitch deck:** [docs/redress-slides.pptx](docs/redress-slides.pptx)
 
 The contract is deployed on Midnight Preprod at address `3bc1d9206114424bf47b621dfc8f3c67ba481de4ccb90b8b912d22343bb3c68c` (set as `CONTRACT_ADDRESS` in `sdk/src/chain.ts`).
 
